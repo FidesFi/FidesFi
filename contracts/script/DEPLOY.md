@@ -36,19 +36,20 @@ Every value is read from env and **reverts loudly if unset** — no silent zero-
 | `FIDES_SUPPLY_CEILING` / `FIDES_SUPPLY_CAP` | share caps (wei) | policy |
 | `FIDES_<SYM>_UNIT` | initial backing per 1e18 shares, per token decimals | you (defines 1 share) |
 
-### 🔒 BLOCKED — must fetch from RHC before deploy
+### ✅ RESOLVED — all in `script/frontier.env.example` (verified on-chain 2026-07-19)
 
-`docs.robinhood.com/chain` is JS-rendered / blocked from static fetch. Get these via **browser MCP**
-on the docs, or `cast`/Blockscout against chain 4663:
+Fetched from `docs.robinhood.com/chain` + Chainlink via browser MCP, then **verified with `cast`**
+against chain 4663 (symbol / decimals / `latestRoundData`). `FIDES_QUOTE` = **USDG** (6 dec), each
+stock's `_ORACLE` is the RHC "shared-svr" Chainlink proxy (8 dec, live price), tokens are 18 dec, and
+`FIDES_POOL_MANAGER` (Uniswap v4) has code and answers `owner()`. Just source the env file.
 
-| Var | What | How |
+### ⏳ Still to confirm (does NOT block a vault+router deploy)
+
+| Var | What | Note |
 |---|---|---|
-| `FIDES_QUOTE` | USD-like currency each stock has a v4 pool against | RHC DEX docs / GeckoTerminal (browser MCP) |
-| `FIDES_<SYM>_TOKEN` (AMD, MU, PLTR, GOOGL, SPCX) | tokenized-stock addresses | RHC token list / Blockscout |
-| `FIDES_<SYM>_ORACLE` | Chainlink `AggregatorV3Interface` feed per stock (8-dec) | docs.robinhood.com/chain/oracles-and-price-feeds |
-| `FIDES_POOL_FEE` | v4 fee tier of the stock/quote pools (e.g. `3000`) | RHC pool config |
-| `FIDES_POOL_SPACING` | v4 tickSpacing (e.g. `60`) | RHC pool config |
-| `FIDES_POOL_HOOKS` | hooks addr (often `0x0`) | RHC pool config |
+| `FIDES_SPCX_TOKEN` / `_ORACLE` | SPCX token (feed already verified) | token registry page was down; refetch, then add `SPCX` to `FIDES_SYMBOLS` |
+| `FIDES_POOL_FEE` / `_SPACING` / `_HOOKS` | actual v4 fee tier of each stock/USDG pool | defaults 3000/60/0x0; confirm before `FIDES_WIRE_ROUTES=true`. Routes are wired post-deploy, so mint/redeem go live without them |
+| Sequencer Uptime Feed | L2 staleness guard (hardening) | separate Chainlink feed; add to the vault's oracle read before mainnet |
 
 > ⚠️ **Before mainnet:** fork-test the router against live RHC v4 pools. `IUniswapV4Minimal.sol` is a
 > hand-written subset; `test/mocks/MockV4PoolManager.sol` validates *our* accounting, not RHC's real

@@ -17,23 +17,24 @@ import {IPoolManager, PoolKey, Currency} from "../src/interfaces/IUniswapV4Minim
 /// Note: mint/redeem go live the moment the vault is deployed. Routes only matter once the agent
 /// starts rebalancing, so a partial deploy (no routes) is still a usable product.
 contract DeployFidesFrontier is Script {
-    // Fides Frontier universe (order fixed; edit here to change the basket).
-    string[6] internal SYMS = ["NVDA", "AMD", "MU", "PLTR", "GOOGL", "SPCX"];
-
     function run() external {
+        // Basket symbols, comma-separated. Default = the verified five (SPCX added once its token lists).
+        string[] memory syms = vm.envOr("FIDES_SYMBOLS", ",", _defaultSyms());
+
         // --- shared / infra addresses ---
         address poolManager = vm.envAddress("FIDES_POOL_MANAGER"); // RHC Uniswap v4 PoolManager
-        address quote = vm.envAddress("FIDES_QUOTE"); // USD-like currency with v4 liquidity vs each stock
+        address quote = vm.envAddress("FIDES_QUOTE"); // USDG — the quote each stock has v4 liquidity against
         address owner = vm.envAddress("FIDES_OWNER"); // router owner (sets routes)
 
-        // --- per-asset addresses (token + Chainlink aggregator + initial unit per 1e18 shares) ---
-        address[] memory tokens = new address[](6);
-        address[] memory oracles = new address[](6);
-        uint256[] memory units = new uint256[](6);
-        for (uint256 i; i < 6; ++i) {
-            tokens[i] = vm.envAddress(_v(SYMS[i], "TOKEN"));
-            oracles[i] = vm.envAddress(_v(SYMS[i], "ORACLE"));
-            units[i] = vm.envUint(_v(SYMS[i], "UNIT"));
+        // --- per-asset (token + Chainlink aggregator + initial unit per 1e18 shares) ---
+        uint256 n = syms.length;
+        address[] memory tokens = new address[](n);
+        address[] memory oracles = new address[](n);
+        uint256[] memory units = new uint256[](n);
+        for (uint256 i; i < n; ++i) {
+            tokens[i] = vm.envAddress(_v(syms[i], "TOKEN"));
+            oracles[i] = vm.envAddress(_v(syms[i], "ORACLE"));
+            units[i] = vm.envUint(_v(syms[i], "UNIT"));
         }
 
         // --- vault guardrails / roles ---
@@ -50,9 +51,9 @@ contract DeployFidesFrontier is Script {
             router: address(0) // set after router is deployed
         });
 
-        // shared v4 pool params for each stock<->quote pool
-        uint24 poolFee = uint24(vm.envUint("FIDES_POOL_FEE"));
-        int24 poolSpacing = int24(int256(vm.envUint("FIDES_POOL_SPACING")));
+        // shared v4 pool params for each stock<->quote pool (defaults; confirm per pool before rebalancing)
+        uint24 poolFee = uint24(vm.envOr("FIDES_POOL_FEE", uint256(3000)));
+        int24 poolSpacing = int24(int256(vm.envOr("FIDES_POOL_SPACING", uint256(60))));
         address poolHooks = vm.envOr("FIDES_POOL_HOOKS", address(0));
 
         vm.startBroadcast();
@@ -62,7 +63,11 @@ contract DeployFidesFrontier is Script {
 
         FidesVault vault = new FidesVault("Fides Frontier", "fFRNT", tokens, units, oracles, cfg);
 
-        _wireRoutesViaQuote(router, tokens, quote, poolFee, poolSpacing, poolHooks);
+        // Routes are only needed once the agent rebalances. Wire them when pool params are confirmed;
+        // mint/redeem are live without them. Set FIDES_WIRE_ROUTES=true to wire at deploy time.
+        if (vm.envOr("FIDES_WIRE_ROUTES", false)) {
+            _wireRoutesViaQuote(router, tokens, quote, poolFee, poolSpacing, poolHooks);
+        }
 
         vm.stopBroadcast();
 
@@ -104,5 +109,14 @@ contract DeployFidesFrontier is Script {
 
     function _v(string memory sym, string memory field) internal pure returns (string memory) {
         return string.concat("FIDES_", sym, "_", field);
+    }
+
+    function _defaultSyms() internal pure returns (string[] memory s) {
+        s = new string[](5);
+        s[0] = "NVDA";
+        s[1] = "AMD";
+        s[2] = "MU";
+        s[3] = "PLTR";
+        s[4] = "GOOGL";
     }
 }
