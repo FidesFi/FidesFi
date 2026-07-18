@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fides Frontier — Fides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('anim')</script>
+<style>
+  :root{
+    --canvas:#F7F7F4;--ink:#17191B;--green:#1EA84D;--green-deep:#137a38;
+    --muted:#767B80;--hair:#E4E4DF;--dark:#0E1113;--dark-hair:#26292b;
+    --disp:"Space Grotesk",sans-serif;--body:"Inter",sans-serif;--mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--canvas);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+  .preview{background:var(--ink);color:var(--canvas);font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;text-align:center;padding:7px 12px}
+  .preview b{color:var(--green);font-weight:600}
+
+  nav{position:sticky;top:0;z-index:20;background:rgba(247,247,244,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:-.01em}
+  .brand svg{width:26px;height:26px;display:block}
+  .back{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .back:hover{color:var(--ink)}
+
+  /* basket header */
+  .bhead{padding:40px 0 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .bhead .name{font-family:var(--disp);font-weight:600;font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;display:flex;align-items:center;gap:14px}
+  .tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--green-deep);background:rgba(30,168,77,.1);padding:5px 10px;border-radius:20px;vertical-align:middle}
+  .bhead .sub{color:var(--muted);font-size:14px;margin-top:6px;font-family:var(--mono)}
+  .bhead .navval{text-align:right}
+  .bhead .navval .n{font-family:var(--mono);font-size:34px;font-weight:500;letter-spacing:-.02em}
+  .bhead .navval .c{font-family:var(--mono);font-size:14px;color:var(--green-deep)}
+
+  .layout{display:grid;grid-template-columns:1fr 380px;gap:28px;align-items:start;padding:34px 0 60px}
+
+  .card{background:#fff;border:1px solid var(--hair);border-radius:16px;overflow:hidden}
+  .card-h{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--hair)}
+  .card-h .t{font-family:var(--disp);font-weight:600;font-size:16px}
+  .card-h .meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  /* composition table */
+  .comp{width:100%;border-collapse:collapse}
+  .comp th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:12px 22px;font-weight:500;border-bottom:1px solid var(--hair)}
+  .comp th:first-child{text-align:left}
+  .comp td{padding:14px 22px;border-bottom:1px solid var(--hair);font-size:14px}
+  .comp tr:last-child td{border-bottom:0}
+  .comp .sym{font-family:var(--disp);font-weight:600;font-size:15px}
+  .comp .co{color:var(--muted);font-size:12px;font-family:var(--body)}
+  .comp .num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  .comp .drift{font-family:var(--mono);text-align:right}
+  .comp .drift.up{color:var(--green-deep)} .comp .drift.dn{color:#a23b2f}
+  .wbar{position:relative;height:8px;background:var(--canvas);border:1px solid var(--hair);border-radius:5px;min-width:120px;overflow:hidden}
+  .wbar .fill{position:absolute;top:0;left:0;height:100%;background:var(--green);opacity:.85;border-radius:5px 0 0 5px}
+  .wbar .tick{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink)}
+
+  .note{padding:14px 22px;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--canvas)}
+  .note b{color:var(--ink);font-weight:500}
+
+  /* rebalance strip */
+  .rbstrip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:14px;overflow:hidden;margin-top:20px}
+  .rbstrip .c{background:#fff;padding:18px 20px}
+  .rbstrip .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .rbstrip .v{font-family:var(--mono);font-size:17px;margin-top:6px}
+  .rbstrip .v.g{color:var(--green-deep)}
+
+  /* ledger */
+  .feed-row{display:grid;grid-template-columns:110px 1fr auto;gap:16px;padding:14px 22px;border-bottom:1px solid var(--hair);align-items:center}
+  .feed-row:last-child{border-bottom:0}
+  .feed-row .when{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .feed-row .what{font-size:13.5px}
+  .feed-row .what .m{font-family:var(--mono);font-size:12.5px;color:#3b3f42}
+  .feed-row .tx{font-family:var(--mono);font-size:12px;color:var(--green-deep);white-space:nowrap}
+
+  /* mint/redeem panel */
+  .panel{position:sticky;top:90px}
+  .tabs{display:flex;border-bottom:1px solid var(--hair)}
+  .tabs button{flex:1;font-family:var(--disp);font-weight:500;font-size:14.5px;padding:15px;background:none;border:0;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.on{color:var(--ink);border-bottom-color:var(--green)}
+  .pbody{padding:22px}
+  .field{border:1px solid var(--hair);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .field .lab{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px}
+  .field input{border:0;background:none;font-family:var(--mono);font-size:22px;width:100%;color:var(--ink);outline:none}
+  .field .asset{font-family:var(--disp);font-weight:600;font-size:14px;white-space:nowrap;padding-left:12px}
+  .arrow{text-align:center;color:var(--muted);margin:2px 0}
+  .summary{margin:16px 0;border-top:1px dashed var(--hair);padding-top:14px}
+  .summary .row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:var(--muted)}
+  .summary .row .v{font-family:var(--mono);color:var(--ink)}
+  .cta{width:100%;font-family:var(--disp);font-weight:500;font-size:15px;padding:14px;border-radius:11px;border:1px solid var(--ink);background:var(--ink);color:var(--canvas);cursor:pointer}
+  .cta:hover{opacity:.92}
+  .paddr{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:center;margin-top:14px}
+  .paddr a{color:var(--green-deep)}
+  .secure-mini{margin-top:14px;border:1px solid var(--hair);border-radius:12px;padding:14px 16px;background:var(--canvas)}
+  .secure-mini .it{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:4px 0;color:#3b3f42}
+  .secure-mini svg{width:14px;height:14px;color:var(--green);flex-shrink:0}
+
+  section{padding:0}
+  .block{margin-top:28px}
+  .block h2{font-family:var(--disp);font-weight:600;font-size:20px;letter-spacing:-.01em;margin-bottom:14px}
+
+  footer{border-top:1px solid var(--hair);padding:40px 0;margin-top:20px}
+  .foot-in{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .disc{font-size:12.5px;color:var(--muted);max-width:60ch;line-height:1.55}
+  .foot-links{display:flex;gap:20px;font-family:var(--mono);font-size:13px}
+
+  .anim .bhead,.anim .layout>*,.anim .block{opacity:0;transform:translateY(14px);will-change:transform,opacity}
+  @media(prefers-reduced-motion:reduce){.anim .bhead,.anim .layout>*,.anim .block{opacity:1!important;transform:none!important}}
+
+  @media(max-width:900px){
+    .layout{grid-template-columns:1fr}
+    .panel{position:static}
+    .comp .wcol{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="preview">preview · <b>mock data</b> · not live — testnet build</div>
+
+<nav><div class="wrap nav-in">
+  <div class="brand">
+    <svg viewBox="0 0 100 100" fill="none"><g stroke="#17191B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M72 30 L45 30 Q37 30 37 38 L37 72 Q37 80 45 80"/><path d="M67 44 L49 44 Q45 44 45 48 L45 50"/></g><path d="M45 56 L64 56" stroke="#1EA84D" stroke-width="7" stroke-linecap="round"/></svg>
+    Fides
+  </div>
+  <a href="fides.html" class="back">← all baskets</a>
+</div></nav>
+
+<div class="wrap">
+  <div class="bhead">
+    <div>
+      <div class="name">Fides Frontier <span class="tag">● managed</span></div>
+      <div class="sub">AI &amp; compute · 6 holdings · momentum · weekly</div>
+    </div>
+    <div class="navval">
+      <div class="n">$104.62</div>
+      <div class="c">▲ 2.41% 24h</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <!-- composition + drift -->
+      <div class="card">
+        <div class="card-h"><span class="t">Composition &amp; drift</span><span class="meta">vs targets from last rebalance</span></div>
+        <table class="comp">
+          <thead><tr><th>Holding</th><th>Target</th><th>Current</th><th class="wcol">Weight</th><th>Drift</th></tr></thead>
+          <tbody>
+            <tr><td><span class="sym">NVDA</span> <span class="co">NVIDIA</span></td><td class="num">28.0%</td><td class="num">30.1%</td><td class="wcol"><div class="wbar"><div class="fill" style="width:86%"></div><div class="tick" style="left:80%"></div></div></td><td class="drift up">+2.1</td></tr>
+            <tr><td><span class="sym">AMD</span> <span class="co">AMD</span></td><td class="num">18.0%</td><td class="num">18.4%</td><td class="wcol"><div class="wbar"><div class="fill" style="width:53%"></div><div class="tick" style="left:51%"></div></div></td><td class="drift up">+0.4</td></tr>
+            <tr><td><span class="sym">GOOGL</span> <span class="co">Alphabet</span></td><td class="num">17.0%</td><td class="num">16.5%</td><td class="wcol"><div class="wbar"><div class="fill" style="width:47%"></div><div class="tick" style="left:49%"></div></div></td><td class="drift dn">−0.5</td></tr>
+            <tr><td><span class="sym">MU</span> <span class="co">Micron</span></td><td class="num">15.0%</td><td class="num">14.2%</td><td class="wcol"><div class="wbar"><div class="fill" style="width:41%"></div><div class="tick" style="left:43%"></div></div></td><td class="drift dn">−0.8</td></tr>
+            <tr><td><span class="sym">PLTR</span> <span class="co">Palantir</span></td><td class="num">12.0%</td><td class="num">11.6%</td><td class="wcol"><div class="wbar"><div class="fill" style="width:33%"></div><div class="tick" style="left:34%"></div></div></td><td class="drift dn">−0.4</td></tr>
+            <tr><td><span class="sym">SPCX</span> <span class="co">SpaceX</span></td><td class="num">10.0%</td><td class="num">9.2%</td><td class="wcol"><div class="wbar"><div class="fill" style="width:26%"></div><div class="tick" style="left:29%"></div></div></td><td class="drift dn">−0.8</td></tr>
+          </tbody>
+        </table>
+        <div class="note">Drift is how far live weights have moved from targets. The agent rebalances back <b>weekly</b> or when total drift exceeds its cap — every correction published on-chain.</div>
+      </div>
+
+      <div class="rbstrip">
+        <div class="c"><div class="l">Last rebalance</div><div class="v">2h ago</div></div>
+        <div class="c"><div class="l">Next scheduled</div><div class="v">in 5d 22h</div></div>
+        <div class="c"><div class="l">Total drift</div><div class="v g">3.1% / 8% cap</div></div>
+      </div>
+
+      <div class="block">
+        <h2>Rebalance history</h2>
+        <div class="card">
+          <div class="feed-row"><span class="when">2h ago</span><span class="what">Rebalanced · <span class="m">+3.2% NVDA, −2.1% PLTR</span> — momentum flip on 4h</span><span class="tx">0x8f…ed58 ↗</span></div>
+          <div class="feed-row"><span class="when">1w ago</span><span class="what">Rebalanced · <span class="m">+2.0% AMD, −1.8% SPCX</span> — vol regime shift</span><span class="tx">0xd0…1eec ↗</span></div>
+          <div class="feed-row"><span class="when">2w ago</span><span class="what">Rebalanced · <span class="m">+1.5% NVDA, −1.0% MU</span> — breadth improving</span><span class="tx">0xaf…93f9 ↗</span></div>
+          <div class="feed-row"><span class="when">3w ago</span><span class="what">Rebalanced · <span class="m">equal-weight base</span> — first cycle</span><span class="tx">0x2c…9a41 ↗</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mint / redeem -->
+    <div class="panel">
+      <div class="card">
+        <div class="tabs">
+          <button class="on" id="tab-mint" onclick="setTab('mint')">Mint</button>
+          <button id="tab-redeem" onclick="setTab('redeem')">Redeem</button>
+        </div>
+        <div class="pbody">
+          <div id="mint">
+            <div class="field"><div><span class="lab">You pay</span><input value="1,000" inputmode="decimal"></div><span class="asset">USDG</span></div>
+            <div class="arrow">↓</div>
+            <div class="field"><div><span class="lab">You receive</span><input value="9.51" readonly></div><span class="asset">FRONTIER</span></div>
+            <div class="summary">
+              <div class="row"><span>Mint fee (0.30%)</span><span class="v">3.00 USDG</span></div>
+              <div class="row"><span>NAV per token</span><span class="v">$104.62</span></div>
+              <div class="row"><span>Slippage cap</span><span class="v">0.50%</span></div>
+            </div>
+            <button class="cta">Mint FRONTIER</button>
+          </div>
+          <div id="redeem" style="display:none">
+            <div class="field"><div><span class="lab">You redeem</span><input value="9.51" inputmode="decimal"></div><span class="asset">FRONTIER</span></div>
+            <div class="arrow">↓</div>
+            <div class="field"><div><span class="lab">You receive</span><input value="994.72" readonly></div><span class="asset">USDG</span></div>
+            <div class="summary">
+              <div class="row"><span>Redeem fee</span><span class="v">none</span></div>
+              <div class="row"><span>Or receive in-kind</span><span class="v">6 stock tokens</span></div>
+              <div class="row"><span>Status</span><span class="v">always open</span></div>
+            </div>
+            <button class="cta">Redeem</button>
+          </div>
+          <div class="paddr">contract <a href="#">0xe1c1…A9DF</a> · verified</div>
+        </div>
+      </div>
+
+      <div class="secure-mini">
+        <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg> Agent can rebalance — never withdraw</div>
+        <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg> Redemption can't be paused</div>
+        <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg> Backed 1:1 by its stock tokens</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer><div class="wrap foot-in">
+  <div class="disc">Preview build on testnet — figures illustrative, not live. Underlying stock tokens are debt instruments of Robinhood Assets (Jersey) Ltd, not equity. Not investment advice.</div>
+  <div class="foot-links"><a href="fides.html">Home</a><a href="#">Docs</a><a href="#">Explorer</a></div>
+</div></footer>
+
+<script>
+  function setTab(t){
+    document.getElementById('mint').style.display   = t==='mint'?'block':'none';
+    document.getElementById('redeem').style.display = t==='redeem'?'block':'none';
+    document.getElementById('tab-mint').classList.toggle('on', t==='mint');
+    document.getElementById('tab-redeem').classList.toggle('on', t==='redeem');
+  }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  var root=document.documentElement;
+  var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduce||!window.gsap){ root.classList.remove('anim'); return; }
+  function run(){
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.to(".bhead",{opacity:1,y:0,duration:.6,ease:"power2.out"});
+    gsap.to(".layout>*",{opacity:1,y:0,duration:.6,ease:"power2.out",stagger:.12,delay:.1});
+    gsap.utils.toArray(".block").forEach(function(b){
+      gsap.to(b,{opacity:1,y:0,duration:.6,ease:"power2.out",
+        scrollTrigger:{trigger:b,start:"top 88%",once:true}});
+    });
+    // drift bars: animate fill width from 0
+    gsap.utils.toArray(".wbar .fill").forEach(function(f){
+      var w=f.style.width; gsap.fromTo(f,{width:0},{width:w,duration:.9,ease:"power2.out",
+        scrollTrigger:{trigger:f,start:"top 92%",once:true}});
+    });
+  }
+  if(document.readyState==="complete") run(); else window.addEventListener("load",run);
+  setTimeout(function(){var h=document.querySelector(".bhead");if(h&&getComputedStyle(h).opacity==="0")root.classList.remove("anim");},1600);
+})();
+</script>
+</body>
+</html>
