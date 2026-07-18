@@ -1,0 +1,18 @@
+# --- internal, NOT published (strategy, teardowns, dev process) ---
+research/
+AGENTS.md
+META.md
+agent/
+__pycache__/
+
+# local env / OS
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# Foundry build output
+contracts/out/
+contracts/cache/
+contracts/broadcast/
