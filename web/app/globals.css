@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+/* Fides brand tokens — Tailwind v4 @theme exposes these as utilities (bg-canvas, text-ink, font-display, ...) */
+@theme {
+  --color-canvas: #f7f7f4;
+  --color-ink: #17191b;
+  --color-green: #1ea84d;
+  --color-green-deep: #137a38;
+  --color-muted: #767b80;
+  --color-hair: #e4e4df;
+  --color-dark: #0e1113;
+  --color-dark-hair: #26292b;
+
+  --font-display: var(--font-display), "Space Grotesk", sans-serif;
+  --font-body: var(--font-body), "Inter", sans-serif;
+  --font-mono: var(--font-mono), "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* anchor jumps clear the floating pill nav */
+:where(section, header)[id] {
+  scroll-margin-top: 6rem;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+/* tabular numerals for data/money */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---- ticker marquee (backed-by strip) ---- */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 38s linear infinite;
+}
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.marquee-mask:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* ---- marching dashes (how-it-works flow arrows) ---- */
+@keyframes dashflow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+.dash-anim {
+  stroke-dasharray: 7 7;
+  animation: dashflow 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee,
+  .dash-anim {
+    animation: none;
+  }
+}
