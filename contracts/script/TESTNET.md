@@ -51,16 +51,28 @@ Handy testnet infra (from `docs.robinhood.com/chain/protocol-contracts`, testnet
 
 Explorer: `explorer.testnet.chain.robinhood.com/address/<addr>` · `/tx/<hash>`
 
-| What | Address / tx |
-|---|---|
-| **Vault — real assets** (TSLA/AMD/AMZN/NFLX/PLTR) | `0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94` |
-| Vault — self-contained (mock) | `0xbbc3297beb20e8eD59db8d6DbB9FcC1A35b19fef` |
-| Router (mock vault) · PoolManager | `0xbf8F1434d35D68CD3db1183a50B4084D2529a6a1` · `0xDcd709b2e6fD72A2bdf28257AeF88a7bfd35B92c` |
-| **Redeem** in-kind (0.5 share → 5 tokens) | `0x0ec9829b5ed8bea7c18154c4ff616fc1934caadc7509aabc250d9672afee12b3` |
-| **Rebalance** (agent: AMD→NVDA, stayed fully backed) | `0x43d2f29ed9c479fae75c823e3240ade758a7839ac57daded119129b18cf47dd8` |
+### Vault A — REAL testnet stock tokens (headline)
 
-Proven: **mint** (deposit basket → index token), **redeem** (burn → basket back, in-kind), **rebalance**
-(agent rotates weights, backing invariant holds before & after). All verified with `cast`.
+`FidesVault` **`0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94`** ("Fides Frontier (testnet, real assets)", fFRNTr),
+backed by the genuine RH testnet stock tokens the deployer holds (`uiMultiplier()==1e18`):
+
+| Op | tx |
+|---|---|
+| **mint** (deposit TSLA/AMD/AMZN/NFLX/PLTR → 1 share) | `0x4f8a9a416df7e71d9ac0b8b518a063197a740c1ac5c9e8aaf6b46865e32f90df` |
+| **rebalance** (agent: AMD→TSLA, stayed fully backed) | `0x1c00daa3a0ea3f7db0191a26d1b66456a4e8ce31278bbecc99da8b6abbebab32` |
+| **redeem** (burn 0.5 share → 5 stocks back, in-kind) | `0xb5efff6a5e72fdaea677d07c057e94d0ef2debeb4c30403191b7a79fdb0ba98f` |
+
+Real testnet stock tokens: TSLA `0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E`, AMD `0x71178BAc73cBeb415514eB542a8995b82669778d`,
+AMZN `0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02`, NFLX `0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93`, PLTR `0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0`.
+Router `0xBa8DbbE3C24B38ea48acc2d530331aD8aFc90998` · mock PoolManager `0xdACf1CF9F336695C508f3325E7eF536CCd9dAF77`.
+
+### Vault B — self-contained (mock tokens)
+
+Vault `0xbbc3297beb20e8eD59db8d6DbB9FcC1A35b19fef` · router `0xbf8F1434d35D68CD3db1183a50B4084D2529a6a1` ·
+PoolManager `0xDcd709b2e6fD72A2bdf28257AeF88a7bfd35B92c`. redeem `0x0ec9829b…afee12b3` · rebalance `0x43d2f29e…18cf47dd8`.
+
+Both vaults proved the full loop — **mint**, **redeem** in-kind, **rebalance** (backing invariant holds
+before & after). All verified with `cast`.
 
 > Deploying via forge needs `--legacy --gas-estimate-multiplier 300` — the chain is "unsupported" so
 > forge under-estimates the Arbitrum L1-calldata gas and deploys OOG without it.
