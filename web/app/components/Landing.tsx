@@ -19,7 +19,7 @@ const VAULT = "0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94";
 const LINKS = {
   github: "https://github.com/FidesFi/FidesFi",
   x: "https://x.com/FidesFi",
-  docs: "https://github.com/FidesFi/FidesFi", // real docs live in the repo until a docs site ships
+  docs: "/docs",
   vault: `${EXPLORER}/address/${VAULT}`,
 };
 const tx = (h: string) => `${EXPLORER}/tx/${h}`;
@@ -146,6 +146,7 @@ function Nav() {
             ["Indexes", "#indexes"],
             ["Ledger", "#ledger"],
             ["Security", "#security"],
+            ["Docs", "/docs"],
           ].map(([label, href]) => (
             <a
               key={href}
@@ -156,12 +157,12 @@ function Nav() {
             </a>
           ))}
         </div>
-        <Ext
-          href={LINKS.vault}
+        <a
+          href="/app"
           className="ml-1 rounded-full bg-ink px-4 py-2 font-display text-[14.5px] font-medium text-canvas transition-transform hover:-translate-y-px"
         >
           Launch app
-        </Ext>
+        </a>
       </div>
     </motion.nav>
   );
@@ -733,11 +734,17 @@ function Footer() {
           instruments of Robinhood Assets (Jersey) Ltd, not equity. Not investment advice.
         </p>
         <div className="flex gap-5 font-mono text-[13px]">
-          {links.map(([label, href]) => (
-            <Ext key={label} href={href} className="text-muted transition-colors hover:text-ink">
-              {label}
-            </Ext>
-          ))}
+          {links.map(([label, href]) =>
+            href.startsWith("/") ? (
+              <a key={label} href={href} className="text-muted transition-colors hover:text-ink">
+                {label}
+              </a>
+            ) : (
+              <Ext key={label} href={href} className="text-muted transition-colors hover:text-ink">
+                {label}
+              </Ext>
+            ),
+          )}
         </div>
       </div>
     </footer>
