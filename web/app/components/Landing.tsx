@@ -552,32 +552,26 @@ function Ticker() {
   );
 }
 
-type Basket = {
-  name: string;
-  sub: string;
-  nav: number;
-  chg: string;
-  holds: string[];
-  points: string;
-};
-
-function Baskets() {
-  const baskets: Basket[] = [
+function Baskets({ vault }: { vault: VaultData }) {
+  const frontierHolds = vault?.holdings.length ? vault.holdings.map((h) => h.symbol) : ["TSLA", "AMD", "AMZN", "NFLX", "PLTR"];
+  const cards = [
     {
       name: "Fides Frontier",
-      sub: "AI & compute · 6 holdings",
-      nav: 104.62,
-      chg: "▲ 2.41% 24h",
-      holds: ["NVDA", "AMD", "MU", "PLTR", "GOOGL", "SPCX"],
-      points: "0,34 30,30 60,33 90,24 120,26 150,18 180,21 210,12 240,16 270,8 300,6",
+      sub: `${frontierHolds.length} tokenized stocks`,
+      live: true,
+      nav: vault?.navPerShare ?? null,
+      backed: vault?.fullyBacked ?? true,
+      holds: frontierHolds,
+      href: "/app",
     },
     {
       name: "Fides Blue",
-      sub: "Mega-cap core · 7 holdings",
-      nav: 101.18,
-      chg: "▲ 0.83% 24h",
+      sub: "Mega-cap core",
+      live: false,
+      nav: null,
+      backed: false,
       holds: ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA"],
-      points: "0,28 30,26 60,29 90,25 120,27 150,23 180,25 210,20 240,22 270,19 300,17",
+      href: "/docs",
     },
   ];
   return (
@@ -587,82 +581,79 @@ function Baskets() {
           <SplitWords
             delay={-0.05}
             words={[
-              { t: "Two" },
-              { t: "indexes." },
               { t: "One" },
-              { t: "transparent", green: true },
-              { t: "manager.", green: true },
+              { t: "index" },
+              { t: "live." },
+              { t: "The" },
+              { t: "next", green: true },
+              { t: "on", green: true },
+              { t: "the", green: true },
+              { t: "way.", green: true },
             ]}
           />
         </h2>
         <p className="max-w-[46ch] text-[15px] text-muted">
-          Each basket is a single token backed 1:1 by its tokenized stocks. An
-          autonomous agent rotates the weights by momentum — on schedule, in the
-          open.
+          Each basket is a single token backed 1:1 by its tokenized stocks, rotated by the
+          agent on schedule. Frontier is live on testnet; Blue is next.
         </p>
       </Reveal>
 
       <div className="grid gap-5 md:grid-cols-2">
-        {baskets.map((b, i) => (
+        {cards.map((b, i) => (
           <Reveal key={b.name} delay={i * 0.08}>
             <motion.a
-              href="/app"
+              href={b.href}
               whileHover={{ y: -4 }}
               transition={{ type: "spring", stiffness: 300, damping: 22 }}
-              className="group block rounded-3xl border border-hair bg-white p-6 transition-colors hover:border-[#cfcfc8]"
+              className={`group block rounded-3xl border border-hair p-6 transition-colors hover:border-[#cfcfc8] ${b.live ? "bg-white" : "bg-white/55"}`}
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-display text-[21px] font-semibold tracking-tight">{b.name}</div>
                   <div className="mt-0.5 text-[13.5px] text-muted">{b.sub}</div>
                 </div>
-                <span className="rounded-full bg-green/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-green-deep">
-                  ● managed
-                </span>
+                {b.live ? (
+                  <span className="rounded-full bg-green/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-green-deep">
+                    ● live · testnet
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-hair px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+                    planned
+                  </span>
+                )}
               </div>
 
-              <div className="mt-5 flex items-baseline gap-3">
-                <span className="font-mono text-[30px] font-medium tracking-[-0.02em]">
-                  <CountUp to={b.nav} prefix="$" />
-                </span>
-                <span className="font-mono text-[14px] text-green-deep">{b.chg}</span>
-              </div>
-
-              <svg className="my-4 block h-11 w-full" viewBox="0 0 300 44" preserveAspectRatio="none">
-                <motion.polyline
-                  fill="none"
-                  stroke="var(--color-green)"
-                  strokeWidth={2}
-                  points={b.points}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  whileInView={{ pathLength: 1, opacity: 1 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 1.4, ease, delay: 0.2 + i * 0.15 }}
-                />
-                <motion.circle
-                  r={3}
-                  fill="var(--color-green)"
-                  cx={b.points.split(" ").at(-1)?.split(",")[0]}
-                  cy={b.points.split(" ").at(-1)?.split(",")[1]}
-                  initial={{ scale: 0, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 0.35, ease, delay: 1.55 + i * 0.15 }}
-                />
-              </svg>
+              {b.live ? (
+                <div className="mt-5 flex items-baseline gap-3">
+                  <span className="font-mono text-[30px] font-medium tracking-[-0.02em]">
+                    {b.nav != null ? <CountUp to={b.nav} prefix="$" /> : "—"}
+                  </span>
+                  <span className="font-mono text-[13px] text-muted">NAV / token</span>
+                  {b.backed && (
+                    <span className="ml-auto inline-flex items-center gap-1 font-mono text-[12px] text-green-deep">
+                      <Check className="h-3.5 w-3.5" />
+                      fully backed
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-5 max-w-[42ch] text-[13.5px] leading-relaxed text-muted">
+                  Launching after Frontier — same guarantees, a mega-cap basket.
+                </p>
+              )}
 
               <motion.div
                 variants={container}
                 initial="hidden"
                 whileInView="show"
                 viewport={{ once: true, margin: "-60px" }}
-                className="flex flex-wrap gap-1.5"
+                className="mt-5 flex flex-wrap gap-1.5"
               >
                 {b.holds.map((h) => (
                   <motion.span
                     key={h}
                     variants={chipPop}
-                    className="rounded-md border border-hair px-2 py-1 font-mono text-[11.5px] text-[#3b3f42]"
+                    className={`rounded-md border border-hair px-2 py-1 font-mono text-[11.5px] ${b.live ? "text-[#3b3f42]" : "text-muted"}`}
                   >
                     {h}
                   </motion.span>
@@ -670,9 +661,9 @@ function Baskets() {
               </motion.div>
 
               <div className="mt-5 flex items-center justify-between font-mono text-[12px] text-muted">
-                <span>momentum · weekly</span>
+                <span>{b.live ? "momentum · weekly" : "mega-cap core"}</span>
                 <span className="inline-flex items-center gap-1 font-medium text-ink">
-                  Open index
+                  {b.live ? "Open index" : "Read the docs"}
                   <span className="transition-transform group-hover:translate-x-0.5">↗</span>
                 </span>
               </div>
@@ -914,7 +905,7 @@ export function Landing({
       <LiveVault data={vault} />
       <HowStory />
       <HowSteps />
-      <Baskets />
+      <Baskets vault={vault} />
       <Security />
       <Ledger rows={ledger} />
       <Footer />
