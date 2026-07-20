@@ -2,6 +2,7 @@
 
 import {
   motion,
+  AnimatePresence,
   animate,
   useInView,
   useReducedMotion,
@@ -166,7 +167,16 @@ const Check = ({ className }: { className?: string }) => (
 
 /* ---------- sections ---------- */
 
+const NAV_LINKS: [string, string][] = [
+  ["How it works", "#how"],
+  ["Indexes", "#indexes"],
+  ["Ledger", "#ledger"],
+  ["Security", "#security"],
+  ["Docs", "/docs"],
+];
+
 function Nav() {
+  const [open, setOpen] = useState(false);
   return (
     <motion.nav
       initial={{ opacity: 0, y: -14 }}
@@ -174,34 +184,87 @@ function Nav() {
       transition={{ duration: 0.6, ease, delay: 0.1 }}
       className="fixed inset-x-0 top-4 z-50 flex justify-center px-4"
     >
-      <div className="flex items-center gap-1 rounded-full border border-hair/80 bg-canvas/80 px-2 py-2 shadow-[0_8px_30px_rgba(23,25,27,0.06)] backdrop-blur-md">
-        <a href="#top" className="flex items-center gap-2 pl-2 pr-3 font-display text-[17px] font-semibold tracking-tight">
-          <Logo className="h-6 w-auto" />
-          Fides
-        </a>
-        <div className="hidden items-center gap-1 md:flex">
-          {[
-            ["How it works", "#how"],
-            ["Indexes", "#indexes"],
-            ["Ledger", "#ledger"],
-            ["Security", "#security"],
-            ["Docs", "/docs"],
-          ].map(([label, href]) => (
-            <a
-              key={href}
-              href={href}
-              className="rounded-full px-3.5 py-2 text-[14.5px] text-muted transition-colors hover:bg-ink/[0.04] hover:text-ink"
-            >
-              {label}
-            </a>
-          ))}
+      <div className="relative">
+        <div className="flex items-center gap-1 rounded-full border border-hair/80 bg-canvas/80 px-2 py-2 shadow-[0_8px_30px_rgba(23,25,27,0.06)] backdrop-blur-md">
+          <a href="#top" className="flex items-center gap-2 pl-2 pr-3 font-display text-[17px] font-semibold tracking-tight">
+            <Logo className="h-6 w-auto" />
+            Fides
+          </a>
+          <div className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                className="rounded-full px-3.5 py-2 text-[14.5px] text-muted transition-colors hover:bg-ink/[0.04] hover:text-ink"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+          <a
+            href="/app"
+            className="ml-1 rounded-full bg-ink px-4 py-2 font-display text-[14.5px] font-medium text-canvas transition-transform hover:-translate-y-px"
+          >
+            Launch app
+          </a>
+          {/* mobile menu toggle — desktop keeps the inline links */}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors hover:bg-ink/[0.06] md:hidden"
+          >
+            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              {open ? (
+                <>
+                  <path d="M5 5l10 10" />
+                  <path d="M15 5L5 15" />
+                </>
+              ) : (
+                <>
+                  <path d="M3 6h14" />
+                  <path d="M3 10h14" />
+                  <path d="M3 14h14" />
+                </>
+              )}
+            </svg>
+          </button>
         </div>
-        <a
-          href="/app"
-          className="ml-1 rounded-full bg-ink px-4 py-2 font-display text-[14.5px] font-medium text-canvas transition-transform hover:-translate-y-px"
-        >
-          Launch app
-        </a>
+
+        {/* mobile dropdown */}
+        <AnimatePresence>
+          {open && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setOpen(false)}
+                className="fixed inset-0 -z-10 md:hidden"
+                aria-hidden
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease }}
+                className="absolute left-1/2 top-[calc(100%+8px)] w-[min(88vw,320px)] -translate-x-1/2 rounded-3xl border border-hair/80 bg-canvas/95 p-2 shadow-[0_20px_60px_-24px_rgba(23,25,27,0.3)] backdrop-blur-md md:hidden"
+              >
+                {NAV_LINKS.map(([label, href]) => (
+                  <a
+                    key={href}
+                    href={href}
+                    onClick={() => setOpen(false)}
+                    className="block rounded-2xl px-4 py-3 font-display text-[15px] text-ink transition-colors hover:bg-ink/[0.05]"
+                  >
+                    {label}
+                  </a>
+                ))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     </motion.nav>
   );
