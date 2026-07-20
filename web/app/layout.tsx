@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import dynamic from "next/dynamic";
+import { SmoothScroll } from "./components/SmoothScroll";
+import { Cursor } from "./components/Cursor";
+
+const Fluid = dynamic(() => import("./components/Fluid").then((m) => m.Fluid));
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -32,7 +37,12 @@ export default function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}
     >
-      <body className="min-h-dvh bg-canvas text-ink font-body">{children}</body>
+      <body className="min-h-dvh bg-canvas text-ink font-body">
+        <SmoothScroll />
+        <Fluid />
+        <Cursor />
+        {children}
+      </body>
     </html>
   );
 }

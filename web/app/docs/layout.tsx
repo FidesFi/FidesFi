@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen text-ink">
       {/* top bar */}
       <div className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-3.5">

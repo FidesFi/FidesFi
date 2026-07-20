@@ -20,6 +20,15 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Lenis drives scrolling when active — native smooth would double-ease */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 /* anchor jumps clear the floating pill nav */
 :where(section, header)[id] {
   scroll-margin-top: 6rem;

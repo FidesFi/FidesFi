@@ -5,11 +5,19 @@ import {
   animate,
   useInView,
   useReducedMotion,
+  useScroll,
+  useTransform,
   type Variants,
 } from "framer-motion";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "./Logo";
 import type { VaultData } from "../lib/vault";
+
+// 3D pieces: client-only, code-split — the page never waits for three.js
+const Terrain = dynamic(() => import("./Terrain").then((m) => m.Terrain), { ssr: false });
+const HowStory = dynamic(() => import("./HowStory").then((m) => m.HowStory), { ssr: false });
+const HowSteps = dynamic(() => import("./HowStory").then((m) => m.HowSteps), { ssr: false });
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -42,6 +50,37 @@ const chipPop: Variants = {
   hidden: { opacity: 0, y: 8, scale: 0.96 },
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease } },
 };
+
+/** noomo-style headline: each word rises out of its own mask, staggered. */
+function SplitWords({
+  words,
+  className,
+  delay = 0,
+}: {
+  words: { t: string; green?: boolean }[];
+  className?: string;
+  delay?: number;
+}) {
+  return (
+    <span className={className}>
+      {words.map((w, i) => (
+        <span key={i} className="inline-block overflow-hidden pb-[0.08em] -mb-[0.08em] align-baseline">
+          <motion.span
+            initial={{ y: "115%", rotate: 6, opacity: 0 }}
+            animate={delay >= 0 ? { y: 0, rotate: 0, opacity: 1 } : undefined}
+            whileInView={delay < 0 ? { y: 0, rotate: 0, opacity: 1 } : undefined}
+            viewport={delay < 0 ? { once: true, margin: "-80px" } : undefined}
+            transition={{ duration: 0.85, ease, delay: Math.abs(delay) + i * 0.07 }}
+            className={`inline-block origin-bottom-left ${w.green ? "text-green" : ""}`}
+          >
+            {w.t}
+          </motion.span>
+          {" "}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 /* ---------- helpers ---------- */
 
@@ -182,19 +221,47 @@ function Hero() {
           WebkitMaskImage: "radial-gradient(120% 90% at 50% 0%, #000 40%, transparent 78%)",
         }}
       />
-      <div className="relative mx-auto max-w-[980px] px-6 pt-40 pb-20 text-center">
+      {/* the signature: an index terrain, generated purely in code — mouse raises it, scroll swells it */}
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.4, ease, delay: 0.5 }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-[58%] sm:block"
+        style={{
+          maskImage: "linear-gradient(180deg, transparent, #000 55%)",
+          WebkitMaskImage: "linear-gradient(180deg, transparent, #000 55%)",
+        }}
+      >
+        <Terrain />
+      </motion.div>
+
+      <HeroParallax>
         <motion.div variants={container} initial="hidden" animate="show">
-          <motion.p variants={fadeUp} className="font-mono text-[12px] uppercase tracking-[0.18em] text-muted">
+          <motion.p
+            initial={{ opacity: 0, letterSpacing: "0.5em" }}
+            animate={{ opacity: 1, letterSpacing: "0.18em" }}
+            transition={{ duration: 1.1, ease, delay: 0.15 }}
+            className="font-mono text-[12px] uppercase text-muted"
+          >
             Fides · on Robinhood Chain
           </motion.p>
 
-          <motion.h1
-            variants={fadeUp}
-            className="mx-auto mt-5 max-w-[16ch] font-display text-[clamp(2.5rem,6.2vw,4.6rem)] font-semibold leading-[1.03] tracking-[-0.03em]"
-          >
-            Managed stock indexes,{" "}
-            <span className="text-green">every move on the record.</span>
-          </motion.h1>
+          <h1 className="mx-auto mt-5 max-w-[16ch] font-display text-[clamp(2.5rem,6.2vw,4.6rem)] font-semibold leading-[1.03] tracking-[-0.03em]">
+            <SplitWords
+              delay={0.35}
+              words={[
+                { t: "Managed" },
+                { t: "stock" },
+                { t: "indexes," },
+                { t: "every", green: true },
+                { t: "move", green: true },
+                { t: "on", green: true },
+                { t: "the", green: true },
+                { t: "record.", green: true },
+              ]}
+            />
+          </h1>
 
           <motion.p variants={fadeUp} className="mx-auto mt-6 max-w-[52ch] text-[18px] leading-relaxed text-[#3b3f42]">
             One token for a whole basket of tokenized stocks. An autonomous agent
@@ -204,16 +271,16 @@ function Hero() {
 
           <motion.div variants={fadeUp} className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <a
-              href="#indexes"
+              href="/app"
               className="rounded-full bg-ink px-6 py-3 font-display text-[15px] font-medium text-canvas transition-transform hover:-translate-y-px"
             >
-              Explore the indexes
+              Launch the app
             </a>
             <a
-              href="#security"
+              href="#how"
               className="rounded-full border border-ink/15 bg-white px-6 py-3 font-display text-[15px] font-medium text-ink transition-colors hover:border-ink/40"
             >
-              How it&apos;s secured
+              How it works
             </a>
           </motion.div>
 
@@ -240,8 +307,38 @@ function Hero() {
         </motion.div>
 
         <Receipt />
-      </div>
+
+        {/* scroll hint */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6, duration: 0.8 }}
+          className="mt-14 flex flex-col items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.22em] text-muted"
+          aria-hidden
+        >
+          scroll
+          <span className="relative h-9 w-px overflow-hidden bg-hair">
+            <motion.span
+              animate={{ y: ["-100%", "220%"] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute left-0 top-0 h-1/2 w-px bg-green"
+            />
+          </span>
+        </motion.div>
+      </HeroParallax>
     </header>
+  );
+}
+
+/** hero content lifts + fades as you scroll away — the canvas stays, the words leave first. */
+function HeroParallax({ children }: { children: React.ReactNode }) {
+  const { scrollYProgress } = useScroll();
+  const y = useTransform(scrollYProgress, [0, 0.1], [0, -40]);
+  const opacity = useTransform(scrollYProgress, [0, 0.12], [1, 0.88]);
+  return (
+    <motion.div style={{ y, opacity }} className="relative mx-auto max-w-[980px] px-6 pt-40 pb-16 text-center">
+      {children}
+    </motion.div>
   );
 }
 
@@ -347,139 +444,6 @@ function Ticker() {
   );
 }
 
-function HowItWorks() {
-  const steps: [string, string, string][] = [
-    [
-      "01",
-      "Deposit the basket, mint the token",
-      "Bring the underlying stocks; the vault mints your index token against them. Fully backed from the first block — supply can never exceed what it holds.",
-    ],
-    [
-      "02",
-      "The agent manages it",
-      "A momentum strategy rotates the weights on schedule. Every trade is submitted on-chain with its rationale — you can read why, not just what.",
-    ],
-    [
-      "03",
-      "Guardrails do the policing",
-      "Fixed whitelist, capped slippage, capped turnover, cooldown between moves. Anything outside the rails, the contract simply rejects.",
-    ],
-    [
-      "04",
-      "Redeem anytime, in-kind",
-      "Burn the token, take the stocks back — one transaction, no permission, no queue. Redemption can never be paused by anyone.",
-    ],
-  ];
-  return (
-    <section id="how" className="mx-auto max-w-[1120px] px-6 py-24">
-      <Reveal className="mb-12 flex flex-wrap items-end justify-between gap-5">
-        <h2 className="max-w-[18ch] font-display text-[clamp(1.8rem,3.4vw,2.4rem)] font-semibold leading-[1.08] tracking-[-0.02em]">
-          How it works
-        </h2>
-        <p className="max-w-[46ch] text-[15px] text-muted">
-          One loop: mint, manage, redeem. The agent handles the weights; the
-          contract keeps custody. Neither can reach past its lane.
-        </p>
-      </Reveal>
-
-      <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.05fr]">
-        {/* steps */}
-        <div className="relative pl-8">
-          <motion.div
-            initial={{ scaleY: 0 }}
-            whileInView={{ scaleY: 1 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 1.1, ease }}
-            className="absolute left-[9px] top-3 bottom-3 w-px origin-top bg-hair"
-          />
-          {steps.map(([n, t, d], i) => (
-            <Reveal key={n} delay={i * 0.1} className="relative pb-8 last:pb-0">
-              <span className="absolute -left-8 top-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-green/50 bg-canvas font-mono text-[9.5px] font-medium text-green-deep">
-                {n}
-              </span>
-              <h3 className="font-display text-[17px] font-semibold tracking-tight">{t}</h3>
-              <p className="mt-1.5 max-w-[52ch] text-[14px] leading-relaxed text-muted">{d}</p>
-            </Reveal>
-          ))}
-        </div>
-
-        {/* animated flow diagram */}
-        <Reveal delay={0.15}>
-          <div className="rounded-3xl border border-hair bg-white p-6">
-            <svg viewBox="0 0 520 300" className="block w-full" role="img" aria-label="Flow: you mint and redeem with the vault; the agent only rebalances">
-              {/* you */}
-              <rect x="24" y="112" width="116" height="64" rx="16" fill="var(--color-canvas)" stroke="var(--color-hair)" />
-              <text x="82" y="140" textAnchor="middle" fontFamily="var(--font-display)" fontSize="15" fontWeight="600" fill="var(--color-ink)">
-                You
-              </text>
-              <text x="82" y="160" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9.5" fill="var(--color-muted)">
-                hold the token
-              </text>
-
-              {/* vault */}
-              <rect x="204" y="86" width="128" height="116" rx="18" fill="var(--color-dark)" />
-              <text x="268" y="118" textAnchor="middle" fontFamily="var(--font-display)" fontSize="15" fontWeight="600" fill="#F7F7F4">
-                Vault
-              </text>
-              <text x="268" y="136" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="#9ba1a4">
-                holds every stock
-              </text>
-              {/* lock */}
-              <rect x="252" y="150" width="32" height="24" rx="6" fill="none" stroke="var(--color-green)" strokeWidth="2" />
-              <path d="M258 150 v-6 a10 10 0 0 1 20 0 v6" fill="none" stroke="var(--color-green)" strokeWidth="2" />
-              <circle cx="268" cy="162" r="2.6" fill="var(--color-green)" />
-              <text x="268" y="192" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="8.5" fill="#9ba1a4">
-                custody stays here
-              </text>
-
-              {/* agent */}
-              <rect x="396" y="112" width="100" height="64" rx="16" fill="var(--color-canvas)" stroke="var(--color-hair)" />
-              <text x="446" y="140" textAnchor="middle" fontFamily="var(--font-display)" fontSize="15" fontWeight="600" fill="var(--color-ink)">
-                Agent
-              </text>
-              <text x="446" y="160" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9.5" fill="var(--color-muted)">
-                decides weights
-              </text>
-
-              {/* mint: you -> vault */}
-              <line x1="140" y1="128" x2="196" y2="128" stroke="var(--color-green)" strokeWidth="2" className="dash-anim" />
-              <path d="M196 128 l-7 -4.5 v9 z" fill="var(--color-green)" />
-              <text x="168" y="118" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="var(--color-green-deep)">
-                mint
-              </text>
-
-              {/* redeem: vault -> you */}
-              <line x1="204" y1="162" x2="148" y2="162" stroke="var(--color-muted)" strokeWidth="2" className="dash-anim" />
-              <path d="M148 162 l7 -4.5 v9 z" fill="var(--color-muted)" />
-              <text x="176" y="180" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="var(--color-muted)">
-                redeem · in-kind
-              </text>
-
-              {/* rebalance: agent -> vault */}
-              <line x1="396" y1="144" x2="340" y2="144" stroke="var(--color-green)" strokeWidth="2" className="dash-anim" />
-              <path d="M340 144 l7 -4.5 v9 z" fill="var(--color-green)" />
-              <text x="368" y="134" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="var(--color-green-deep)">
-                rebalance
-              </text>
-
-              {/* agent cannot withdraw */}
-              <text x="368" y="216" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="#a23b2f">
-                ✕ withdraw — not possible
-              </text>
-              <path d="M368 208 q0 -40 -36 -48" fill="none" stroke="#a23b2f" strokeWidth="1.3" strokeDasharray="3 4" opacity="0.55" />
-
-              {/* base line */}
-              <text x="260" y="262" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="10" fill="var(--color-muted)">
-                every arrow above = a public transaction on Robinhood Chain
-              </text>
-            </svg>
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
 type Basket = {
   name: string;
   sub: string;
@@ -512,7 +476,16 @@ function Baskets() {
     <section id="indexes" className="mx-auto max-w-[1120px] px-6 py-24">
       <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-5">
         <h2 className="max-w-[18ch] font-display text-[clamp(1.8rem,3.4vw,2.4rem)] font-semibold leading-[1.08] tracking-[-0.02em]">
-          Two indexes. One transparent manager.
+          <SplitWords
+            delay={-0.05}
+            words={[
+              { t: "Two" },
+              { t: "indexes." },
+              { t: "One" },
+              { t: "transparent", green: true },
+              { t: "manager.", green: true },
+            ]}
+          />
         </h2>
         <p className="max-w-[46ch] text-[15px] text-muted">
           Each basket is a single token backed 1:1 by its tokenized stocks. An
@@ -616,7 +589,10 @@ function Security() {
         <div className="rounded-[28px] bg-dark px-8 py-12 text-canvas sm:px-12">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
             <h2 className="max-w-[16ch] font-display text-[clamp(1.8rem,3.4vw,2.4rem)] font-semibold leading-[1.08] tracking-[-0.02em] text-white">
-              Built so it can&apos;t be rugged.
+              <SplitWords
+                delay={-0.05}
+                words={[{ t: "Built" }, { t: "so" }, { t: "it" }, { t: "can't" }, { t: "be" }, { t: "rugged.", green: true }]}
+              />
             </h2>
             <p className="max-w-[44ch] text-[15px] text-[#9ba1a4]">
               The agent decides weights. It never touches custody. These aren&apos;t
@@ -681,7 +657,7 @@ function Ledger() {
     <section id="ledger" className="mx-auto max-w-[1120px] px-6 pb-24">
       <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-5">
         <h2 className="font-display text-[clamp(1.8rem,3.4vw,2.4rem)] font-semibold leading-[1.08] tracking-[-0.02em]">
-          The ledger
+          <SplitWords delay={-0.05} words={[{ t: "The" }, { t: "ledger", green: true }]} />
         </h2>
         <p className="max-w-[46ch] text-[15px] text-muted">
           Every move, on-chain and in order — with the reason and the receipt. Real
@@ -690,7 +666,13 @@ function Ledger() {
       </Reveal>
 
       <div className="relative pl-6">
-        <div className="absolute left-[5px] top-2 bottom-2 w-px bg-hair" />
+        <motion.div
+          initial={{ scaleY: 0 }}
+          whileInView={{ scaleY: 1 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 1.2, ease }}
+          className="absolute left-[5px] top-2 bottom-2 w-px origin-top bg-hair"
+        />
         {feed.map((f, i) => (
           <Reveal key={f.hash} delay={i * 0.06} className="relative pb-6 last:pb-0">
             <span className="absolute -left-[23px] top-2 h-2.5 w-2.5 rounded-full border-2 border-canvas bg-green" />
@@ -831,7 +813,8 @@ export function Landing({ vault }: { vault: VaultData }) {
       <Hero />
       <Ticker />
       <LiveVault data={vault} />
-      <HowItWorks />
+      <HowStory />
+      <HowSteps />
       <Baskets />
       <Security />
       <Ledger />

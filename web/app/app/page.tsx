@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function AppPage() {
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen text-ink">
       <div className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-3.5">
           <a href="/" className="flex items-center gap-2 font-display text-[16px] font-semibold tracking-tight">
