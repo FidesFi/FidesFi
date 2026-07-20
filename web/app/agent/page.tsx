@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Logo } from "../components/Logo";
+import navHistory from "../data/nav-history.json";
 import { EXPLORER, VAULT_ADDRESS } from "../lib/appchain";
 import { getAgentData } from "../lib/vault";
+
+type NavPoint = { date: string; t: number; managed: number; benchmark: number };
 
 export const dynamic = "force-dynamic";
 
@@ -100,20 +103,8 @@ export default async function AgentPage() {
               </div>
             </div>
 
-            {/* performance — honest placeholder until daily NAV snapshots accumulate */}
-            <div className="mt-6 rounded-3xl border border-hair bg-white px-6 py-6">
-              <div className="flex items-baseline justify-between">
-                <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">Managed NAV vs. frozen basket</p>
-                <span className="font-mono text-[11px] text-muted">building</span>
-              </div>
-              <div className="mt-5 flex h-[150px] items-center justify-center rounded-2xl border border-dashed border-hair bg-canvas/60 px-6 text-center">
-                <p className="max-w-[46ch] text-[13px] leading-relaxed text-muted">
-                  This chart plots the managed index against the same basket left untouched — the gap
-                  is the agent&apos;s real contribution, net of costs. It starts the day daily NAV
-                  snapshots begin and fills in from there. No back-fill, no invented history.
-                </p>
-              </div>
-            </div>
+            {/* performance — managed NAV vs. the frozen day-0 basket, from the daily snapshotter */}
+            <NavChart points={navHistory.points as NavPoint[]} />
 
             {/* track record */}
             <div className="mt-6 rounded-3xl border border-hair bg-white px-6 py-6">
@@ -186,6 +177,81 @@ export default async function AgentPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function NavChart({ points }: { points: NavPoint[] }) {
+  const latest = points[points.length - 1];
+  const deltaPct = latest && latest.benchmark > 0 ? ((latest.managed - latest.benchmark) / latest.benchmark) * 100 : 0;
+  const deltaLabel =
+    Math.abs(deltaPct) < 0.005 ? "flat vs. hold" : `${deltaPct > 0 ? "+" : "−"}${Math.abs(deltaPct).toFixed(2)}% vs. hold`;
+
+  return (
+    <div className="mt-6 rounded-3xl border border-hair bg-white px-6 py-6">
+      <div className="flex items-baseline justify-between">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">Managed NAV vs. frozen basket</p>
+        {points.length >= 2 ? (
+          <span className={`font-mono text-[11px] ${deltaPct >= 0 ? "text-green-deep" : "text-[#a23b2f]"}`}>{deltaLabel}</span>
+        ) : (
+          <span className="font-mono text-[11px] text-muted">building</span>
+        )}
+      </div>
+
+      {points.length < 2 ? (
+        <div className="mt-5 flex h-[150px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-hair bg-canvas/60 px-6 text-center">
+          <p className="font-display text-[22px] font-semibold tnum">{latest ? money(latest.managed) : "—"}</p>
+          <p className="max-w-[48ch] text-[12.5px] leading-relaxed text-muted">
+            {points.length === 0 ? "The daily snapshot starts today." : `${points.length} daily snapshot so far.`} The
+            managed line and its frozen day-0 benchmark build from here — the public node keeps no
+            history, so there is no back-fill and nothing invented.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-2 flex gap-4 font-mono text-[11px] text-muted">
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-3.5 bg-green" />Managed</span>
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0 w-3.5 border-t border-dashed border-muted" />Buy-and-hold</span>
+          </div>
+          <NavPlot points={points} />
+          <p className="mt-1 font-mono text-[10.5px] text-muted">
+            {points[0].date} → {latest.date} · one snapshot/day
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function NavPlot({ points }: { points: NavPoint[] }) {
+  const W = 800;
+  const H = 168;
+  const padX = 6;
+  const padTop = 12;
+  const padBot = 14;
+  const vals = points.flatMap((p) => [p.managed, p.benchmark]);
+  let lo = Math.min(...vals);
+  let hi = Math.max(...vals);
+  const mid = (lo + hi) / 2 || 1;
+  const minRange = Math.abs(mid) * 0.01; // keep a near-flat line off the axis edge
+  if (hi - lo < minRange) {
+    lo = mid - minRange / 2;
+    hi = mid + minRange / 2;
+  }
+  const x = (i: number) => padX + (i / (points.length - 1)) * (W - 2 * padX);
+  const y = (v: number) => padTop + (1 - (v - lo) / (hi - lo)) * (H - padTop - padBot);
+  const path = (key: "managed" | "benchmark") =>
+    points.map((p, i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ");
+  const last = points[points.length - 1];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Managed NAV versus the frozen day-0 basket over time" className="mt-3">
+      {[0.25, 0.5, 0.75].map((f) => (
+        <line key={f} x1={padX} x2={W - padX} y1={padTop + f * (H - padTop - padBot)} y2={padTop + f * (H - padTop - padBot)} stroke="var(--color-hair)" strokeWidth={1} />
+      ))}
+      <polyline points={path("benchmark")} fill="none" stroke="#8a8f8b" strokeWidth={1.6} strokeDasharray="4 4" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polyline points={path("managed")} fill="none" stroke="#1EA84D" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <circle cx={x(points.length - 1)} cy={y(last.managed)} r={3.2} fill="#1EA84D" />
+    </svg>
   );
 }
 
