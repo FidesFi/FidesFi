@@ -1,8 +1,10 @@
 # Fides
 
-Managed, fully-backed stock indexes on **Robinhood Chain** (chain 4663). One token per index, minted and redeemed in-kind against tokenized stocks. An autonomous agent rebalances the weights — **within on-chain guardrails it cannot escape** — and every rebalance is published on-chain.
+Managed, fully-backed stock indexes on **Robinhood Chain** (chain 4663). One token per index, minted and redeemed in-kind against tokenized stocks. An autonomous agent rebalances the weights — **within on-chain guardrails it cannot escape** — and every rebalance is a public on-chain transaction.
 
 > Verify, don't trust. The agent can *manage* your basket. It can never *withdraw* it.
+
+**Live on testnet** → **[fidesfi-protocol.vercel.app](https://fidesfi-protocol.vercel.app)** — mint & redeem straight from the contract.
 
 ## Baskets
 
@@ -13,9 +15,13 @@ Managed, fully-backed stock indexes on **Robinhood Chain** (chain 4663). One tok
 
 | Path | |
 |---|---|
-| `contracts/` | the vault + **73 tests** (unit · fuzz · invariant · fork · adversarial). See `contracts/README.md`. |
-| `web-preview/` | design preview — **mock data, labeled `preview`**, not live |
-| `brand/` | logo |
+| `contracts/` | the vault + **89 tests** (unit · fuzz · invariant · fork · adversarial). See `contracts/README.md`. |
+| `web/` | the live app + site (Next.js), deployed at [fidesfi-protocol.vercel.app](https://fidesfi-protocol.vercel.app) |
+| `brand/` | logo & assets |
+
+## The agent
+
+A momentum strategy rebalances the baskets on a schedule. It holds the `rebalancer` role — but that role is boxed in by the contract: whitelist, slippage cap, turnover cap, cooldown, and **no withdrawal path**. It can rotate weights; it can never move funds out. Every rebalance is a public on-chain transaction you can verify. The strategy code runs off-repo.
 
 ## Guarantees (enforced by the contract)
 
@@ -30,7 +36,8 @@ An invariant test proves backing holds under randomized mint / redeem / rebalanc
 ## Build
 
 ```bash
-cd contracts && forge test
+cd contracts && forge test              # 89 tests
+cd web && npm install && npm run dev    # the app + site
 ```
 
 ## Status
@@ -39,4 +46,4 @@ Preview / testnet. Not audited yet. Underlying stock tokens are debt instruments
 
 ---
 
-**$FIDES** · on Robinhood Chain · [@FidesFi](https://x.com/FidesFi)
+**$FIDES** · on Robinhood Chain · [@FidesFi](https://x.com/FidesFi) · [live app](https://fidesfi-protocol.vercel.app)
