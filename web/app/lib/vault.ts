@@ -186,6 +186,92 @@ export async function getLatestRebalance(): Promise<LatestRebalance> {
   }
 }
 
+/* ---------- the ledger: real Mint / Redeem / Rebalanced activity ---------- */
+
+const mintEvent = {
+  type: "event",
+  name: "Mint",
+  inputs: [
+    { name: "from", type: "address", indexed: true },
+    { name: "to", type: "address", indexed: true },
+    { name: "shares", type: "uint256", indexed: false },
+    { name: "fee", type: "uint256", indexed: false },
+  ],
+} as const;
+
+const redeemEvent = {
+  type: "event",
+  name: "Redeem",
+  inputs: [
+    { name: "from", type: "address", indexed: true },
+    { name: "to", type: "address", indexed: true },
+    { name: "shares", type: "uint256", indexed: false },
+  ],
+} as const;
+
+export type LedgerRow = {
+  type: "Mint" | "Redeem" | "Rebalance";
+  title: string;
+  detail: string;
+  txHash: `0x${string}`;
+  timestamp: number;
+};
+
+const tokenPhrase = (v: bigint) => {
+  const s = Number(formatUnits(v, 18)).toLocaleString("en-US", { maximumFractionDigits: 3 });
+  return `${s} index token${s === "1" ? "" : "s"}`;
+};
+
+export async function getLedger(limit = 6): Promise<LedgerRow[]> {
+  try {
+    const [mints, redeems, rebals] = await Promise.all([
+      publicClient.getLogs({ address: VAULT_ADDRESS, event: mintEvent, fromBlock: REBALANCE_SCAN_FROM, toBlock: "latest" }),
+      publicClient.getLogs({ address: VAULT_ADDRESS, event: redeemEvent, fromBlock: REBALANCE_SCAN_FROM, toBlock: "latest" }),
+      publicClient.getLogs({ address: VAULT_ADDRESS, event: rebalancedEvent, fromBlock: REBALANCE_SCAN_FROM, toBlock: "latest" }),
+    ]);
+
+    type Raw = { kind: "Mint" | "Redeem" | "Rebalance"; block: bigint; logIndex: number; txHash: `0x${string}`; row: Omit<LedgerRow, "timestamp"> };
+    const raw: Raw[] = [];
+    for (const l of mints) {
+      raw.push({
+        kind: "Mint",
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        txHash: l.transactionHash,
+        row: { type: "Mint", title: "Holder minted", detail: `Deposited the basket → minted ${tokenPhrase(l.args.shares ?? 0n)}, fully backed`, txHash: l.transactionHash },
+      });
+    }
+    for (const l of redeems) {
+      raw.push({
+        kind: "Redeem",
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        txHash: l.transactionHash,
+        row: { type: "Redeem", title: "Holder redeemed in-kind", detail: `Burned ${tokenPhrase(l.args.shares ?? 0n)} → took the underlying stocks back, one tx`, txHash: l.transactionHash },
+      });
+    }
+    for (const l of rebals) {
+      const nb = Number(formatUnits(l.args.navBefore ?? 0n, 18));
+      const na = Number(formatUnits(l.args.navAfter ?? 0n, 18));
+      const held = Math.abs(na - nb) / Math.max(nb, 1e-9) < 1e-4;
+      raw.push({
+        kind: "Rebalance",
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        txHash: l.transactionHash,
+        row: { type: "Rebalance", title: "Agent rotated the basket", detail: `Rotated weights on momentum · NAV $${nb.toFixed(2)} → $${na.toFixed(2)}${held ? " · value-neutral" : ""}`, txHash: l.transactionHash },
+      });
+    }
+
+    raw.sort((a, b) => (a.block === b.block ? b.logIndex - a.logIndex : Number(b.block - a.block)));
+    const top = raw.slice(0, limit);
+    const blocks = await Promise.all(top.map((r) => publicClient.getBlock({ blockNumber: r.block })));
+    return top.map((r, i) => ({ ...r.row, timestamp: Number(blocks[i].timestamp) }));
+  } catch {
+    return [];
+  }
+}
+
 /* ---------- the agent console: identity, live status, track record, guardrails ---------- */
 
 export type RebalanceRow = {

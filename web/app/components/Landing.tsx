@@ -13,7 +13,7 @@ import {
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "./Logo";
-import type { VaultData, LatestRebalance } from "../lib/vault";
+import type { VaultData, LatestRebalance, LedgerRow } from "../lib/vault";
 
 // 3D pieces: client-only, code-split — the page never waits for three.js
 const Terrain = dynamic(() => import("./Terrain").then((m) => m.Terrain), { ssr: false });
@@ -735,32 +735,7 @@ function Security() {
   );
 }
 
-function Ledger() {
-  const feed: {
-    type: string;
-    title: string;
-    detail: string;
-    hash: string;
-  }[] = [
-    {
-      type: "Rebalance",
-      title: "Agent rotated the basket",
-      detail: "trimmed AMD → added TSLA · TSLA momentum > AMD · stayed fully backed",
-      hash: TX.rebalance,
-    },
-    {
-      type: "Redeem",
-      title: "Holder exited in-kind",
-      detail: "burned 0.5 index token → received all 5 underlying stocks, one tx",
-      hash: TX.redeem,
-    },
-    {
-      type: "Mint",
-      title: "Holder entered",
-      detail: "deposited the basket → minted 1 index token, fully backed",
-      hash: TX.mint,
-    },
-  ];
+function Ledger({ rows }: { rows: LedgerRow[] }) {
   return (
     <section id="ledger" className="mx-auto max-w-[1120px] px-6 pb-24">
       <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-5">
@@ -768,40 +743,48 @@ function Ledger() {
           <SplitWords delay={-0.05} words={[{ t: "The" }, { t: "ledger", green: true }]} />
         </h2>
         <p className="max-w-[46ch] text-[15px] text-muted">
-          Every move, on-chain and in order — with the reason and the receipt. Real
-          testnet activity from the live vault. Click any row to verify.
+          Every move, on-chain and in order — read live from the vault&apos;s own Mint,
+          Redeem, and Rebalanced events. Click any row to verify.
         </p>
       </Reveal>
 
-      <div className="relative pl-6">
-        <motion.div
-          initial={{ scaleY: 0 }}
-          whileInView={{ scaleY: 1 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 1.2, ease }}
-          className="absolute left-[5px] top-2 bottom-2 w-px origin-top bg-hair"
-        />
-        {feed.map((f, i) => (
-          <Reveal key={f.hash} delay={i * 0.06} className="relative pb-6 last:pb-0">
-            <span className="absolute -left-[23px] top-2 h-2.5 w-2.5 rounded-full border-2 border-canvas bg-green" />
-            <Ext
-              href={tx(f.hash)}
-              className="block rounded-2xl border border-hair bg-white px-5 py-4 transition-colors hover:border-[#cfcfc8]"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <div className="flex items-baseline gap-2.5">
-                  <span className="rounded-md bg-green/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.06em] text-green-deep">
-                    {f.type}
-                  </span>
-                  <b className="text-[14.5px] font-semibold">{f.title}</b>
+      {rows.length === 0 ? (
+        <Reveal className="rounded-2xl border border-hair bg-white px-5 py-6 text-[14px] leading-relaxed text-muted">
+          The live feed is momentarily unavailable — every mint, redeem, and rebalance stays fully
+          verifiable on the explorer.
+        </Reveal>
+      ) : (
+        <div className="relative pl-6">
+          <motion.div
+            initial={{ scaleY: 0 }}
+            whileInView={{ scaleY: 1 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 1.2, ease }}
+            className="absolute left-[5px] top-2 bottom-2 w-px origin-top bg-hair"
+          />
+          {rows.map((f, i) => (
+            <Reveal key={`${f.txHash}-${i}`} delay={i * 0.06} className="relative pb-6 last:pb-0">
+              <span className="absolute -left-[23px] top-2 h-2.5 w-2.5 rounded-full border-2 border-canvas bg-green" />
+              <Ext
+                href={tx(f.txHash)}
+                className="block rounded-2xl border border-hair bg-white px-5 py-4 transition-colors hover:border-[#cfcfc8]"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="rounded-md bg-green/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.06em] text-green-deep">
+                      {f.type}
+                    </span>
+                    <b className="text-[14.5px] font-semibold">{f.title}</b>
+                    <span className="font-mono text-[11.5px] text-muted">{timeAgo(f.timestamp)}</span>
+                  </div>
+                  <span className="font-mono text-[12px] text-green-deep">{short(f.txHash)} ↗</span>
                 </div>
-                <span className="font-mono text-[12px] text-green-deep">{short(f.hash)} ↗</span>
-              </div>
-              <p className="mt-1.5 text-[13.5px] text-muted">{f.detail}</p>
-            </Ext>
-          </Reveal>
-        ))}
-      </div>
+                <p className="mt-1.5 text-[13.5px] text-muted">{f.detail}</p>
+              </Ext>
+            </Reveal>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -914,7 +897,15 @@ function LiveVault({ data }: { data: VaultData }) {
   );
 }
 
-export function Landing({ vault, rebalance }: { vault: VaultData; rebalance: LatestRebalance }) {
+export function Landing({
+  vault,
+  rebalance,
+  ledger,
+}: {
+  vault: VaultData;
+  rebalance: LatestRebalance;
+  ledger: LedgerRow[];
+}) {
   return (
     <main>
       <Nav />
@@ -925,7 +916,7 @@ export function Landing({ vault, rebalance }: { vault: VaultData; rebalance: Lat
       <HowSteps />
       <Baskets />
       <Security />
-      <Ledger />
+      <Ledger rows={ledger} />
       <Footer />
     </main>
   );
