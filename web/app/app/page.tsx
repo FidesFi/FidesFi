@@ -11,11 +11,11 @@ export default function AppPage() {
   return (
     <div className="min-h-screen text-ink">
       <div className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-3.5">
+        <div className="mx-auto flex max-w-[1180px] items-center justify-between px-4 py-3.5 sm:px-6">
           <a href="/" className="flex items-center gap-2 font-display text-[16px] font-semibold tracking-tight">
             <Logo className="h-5 w-auto" />
             Fides
-            <span className="ml-1 rounded-md bg-green/10 px-1.5 py-0.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.1em] text-green-deep">
+            <span className="ml-1 hidden rounded-md bg-green/10 px-1.5 py-0.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.1em] text-green-deep sm:inline-block">
               app · testnet
             </span>
           </a>
