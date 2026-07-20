@@ -145,7 +145,7 @@ function Chips({ progress }: { progress: MotionValue<number> }) {
   });
 
   return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, N]}>
+    <instancedMesh ref={mesh} args={[undefined, undefined, N]} frustumCulled={false}>
       <cylinderGeometry args={[0.155, 0.155, 0.048, 28]} />
       <meshStandardMaterial roughness={0.25} metalness={0.35} />
     </instancedMesh>
