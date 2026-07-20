@@ -40,6 +40,10 @@ cd contracts && forge test              # 89 tests
 cd web && npm install && npm run dev    # the app + site
 ```
 
+## License
+
+MIT — see [LICENSE](LICENSE). Covers the contracts and web app in this repo. The rebalancer strategy runs off-repo and is not part of this license.
+
 ## Status
 
 Preview / testnet. Not audited yet. Underlying stock tokens are debt instruments of Robinhood Assets (Jersey) Ltd — **not equity**, no voting rights. Nothing here is investment advice.
