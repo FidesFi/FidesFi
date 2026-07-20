@@ -170,7 +170,7 @@ const Check = ({ className }: { className?: string }) => (
 const NAV_LINKS: [string, string][] = [
   ["How it works", "#how"],
   ["Indexes", "#indexes"],
-  ["Ledger", "#ledger"],
+  ["Agent", "/agent"],
   ["Security", "#security"],
   ["Docs", "/docs"],
 ];

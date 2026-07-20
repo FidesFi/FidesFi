@@ -20,6 +20,11 @@ const vaultAbi = [
   { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "isFullyBacked", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
   { type: "function", name: "assets", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
+  { type: "function", name: "rebalancer", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "lastRebalance", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+  { type: "function", name: "rebalanceCooldown", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+  { type: "function", name: "maxTurnoverBps", stateMutability: "view", inputs: [], outputs: [{ type: "uint16" }] },
+  { type: "function", name: "maxSlippageBps", stateMutability: "view", inputs: [], outputs: [{ type: "uint16" }] },
 ] as const;
 
 const erc20Abi = [
@@ -178,5 +183,89 @@ export async function getLatestRebalance(): Promise<LatestRebalance> {
     return await toRebalance(client, decoded.args, KNOWN_REBALANCE_TX, receipt.blockNumber);
   } catch {
     return null; // graceful: the card falls back to a static explorer link
+  }
+}
+
+/* ---------- the agent console: identity, live status, track record, guardrails ---------- */
+
+export type RebalanceRow = {
+  txHash: `0x${string}`;
+  timestamp: number;
+  navBefore: number;
+  navAfter: number;
+  rationale: `0x${string}`;
+};
+
+export type AgentData = {
+  rebalancer: `0x${string}`;
+  lastRebalance: number; // unix seconds
+  cooldownSecs: number;
+  turnoverCapBps: number;
+  slippageCapBps: number;
+  navUsd: number;
+  navPerToken: number;
+  assetCount: number;
+  fullyBacked: boolean;
+  rebalances: RebalanceRow[]; // newest first
+} | null;
+
+export async function getAgentData(): Promise<AgentData> {
+  try {
+    const read = <T,>(functionName: (typeof vaultAbi)[number]["name"]) =>
+      client.readContract({ address: VAULT_ADDRESS, abi: vaultAbi, functionName }) as Promise<T>;
+    const [rebalancer, last, cooldown, turnover, slippage, nav, supply, backed, assets] = await Promise.all([
+      read<`0x${string}`>("rebalancer"),
+      read<bigint>("lastRebalance"),
+      read<bigint>("rebalanceCooldown"),
+      read<number>("maxTurnoverBps"),
+      read<number>("maxSlippageBps"),
+      read<bigint>("nav"),
+      read<bigint>("totalSupply"),
+      read<boolean>("isFullyBacked"),
+      read<readonly `0x${string}`[]>("assets"),
+    ]);
+
+    // full track record — via the public RPC, since Alchemy's free tier caps getLogs to 10 blocks
+    let rebalances: RebalanceRow[] = [];
+    try {
+      const logs = await publicClient.getLogs({
+        address: VAULT_ADDRESS,
+        event: rebalancedEvent,
+        fromBlock: REBALANCE_SCAN_FROM,
+        toBlock: "latest",
+      });
+      rebalances = await Promise.all(
+        logs.map(async (l) => {
+          const block = await publicClient.getBlock({ blockNumber: l.blockNumber });
+          return {
+            txHash: l.transactionHash,
+            timestamp: Number(block.timestamp),
+            navBefore: Number(formatUnits(l.args.navBefore ?? 0n, 18)),
+            navAfter: Number(formatUnits(l.args.navAfter ?? 0n, 18)),
+            rationale: (l.args.rationale ?? "0x") as `0x${string}`,
+          };
+        }),
+      );
+      rebalances.reverse(); // newest first
+    } catch {
+      // leave the track record empty; live status + guardrails still render
+    }
+
+    const navUsd = Number(formatUnits(nav, 18));
+    const supplyN = Number(formatUnits(supply, 18));
+    return {
+      rebalancer,
+      lastRebalance: Number(last),
+      cooldownSecs: Number(cooldown),
+      turnoverCapBps: Number(turnover),
+      slippageCapBps: Number(slippage),
+      navUsd,
+      navPerToken: supplyN > 0 ? navUsd / supplyN : 0,
+      assetCount: assets.length,
+      fullyBacked: backed,
+      rebalances,
+    };
+  } catch {
+    return null;
   }
 }

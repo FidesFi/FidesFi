@@ -2,7 +2,8 @@
 research/
 AGENTS.md
 META.md
-agent/
+# the private rebalancer strategy (repo root only — NOT the web /agent route)
+/agent/
 __pycache__/
 
 # local env / OS

@@ -583,13 +583,8 @@ function PositionCard({ vault, onAdd, onRedeem }: { vault: VaultState; onAdd: ()
           </svg>
           Last rebalance · {timeAgo(vault.lastRebalance)}
         </span>
-        <a
-          href={`${EXPLORER}/address/${VAULT_ADDRESS}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-[12px] text-green-deep"
-        >
-          managed by the agent · weekly ↗
+        <a href="/agent" className="font-mono text-[12px] text-green-deep">
+          managed by the agent · weekly →
         </a>
       </div>
 
