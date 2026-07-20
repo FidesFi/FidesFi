@@ -37,6 +37,14 @@ export const vaultAbi = [
   { type: "function", name: "mintPaused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
   { type: "function", name: "mintFeeBps", stateMutability: "view", inputs: [], outputs: [{ type: "uint16" }] },
   { type: "function", name: "supplyCap", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "lastRebalance", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+  {
+    type: "function",
+    name: "oracleOf",
+    stateMutability: "view",
+    inputs: [{ type: "address" }],
+    outputs: [{ type: "address" }],
+  },
   {
     type: "function",
     name: "balanceOf",
@@ -88,6 +96,24 @@ export const erc20Abi = [
     stateMutability: "nonpayable",
     inputs: [{ type: "address" }, { type: "uint256" }],
     outputs: [{ type: "bool" }],
+  },
+] as const;
+
+/** Chainlink feed — enough to price each asset the way the vault's own _value() does. */
+export const aggregatorAbi = [
+  { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  {
+    type: "function",
+    name: "latestRoundData",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "roundId", type: "uint80" },
+      { name: "answer", type: "int256" },
+      { name: "startedAt", type: "uint256" },
+      { name: "updatedAt", type: "uint256" },
+      { name: "answeredInRound", type: "uint80" },
+    ],
   },
 ] as const;
 
