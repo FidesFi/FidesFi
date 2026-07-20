@@ -15,7 +15,7 @@ Managed, fully-backed stock indexes on **Robinhood Chain** (chain 4663). One tok
 
 | Path | |
 |---|---|
-| `contracts/` | the vault + **89 tests** (unit · fuzz · invariant · fork · adversarial). See `contracts/README.md`. |
+| `contracts/` | the vault, a one-click USDG zapper + **100 tests** (unit · fuzz · invariant · fork · adversarial). See `contracts/README.md`. |
 | `web/` | the live app + site (Next.js), deployed at [fidesfi-protocol.vercel.app](https://fidesfi-protocol.vercel.app) |
 | `brand/` | logo & assets |
 
@@ -36,7 +36,7 @@ An invariant test proves backing holds under randomized mint / redeem / rebalanc
 ## Build
 
 ```bash
-cd contracts && forge test              # 89 tests
+cd contracts && forge test              # 100 tests
 cd web && npm install && npm run dev    # the app + site
 ```
 
