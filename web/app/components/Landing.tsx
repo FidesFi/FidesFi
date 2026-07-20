@@ -525,9 +525,7 @@ function Baskets() {
         {baskets.map((b, i) => (
           <Reveal key={b.name} delay={i * 0.08}>
             <motion.a
-              href={LINKS.vault}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/app"
               whileHover={{ y: -4 }}
               transition={{ type: "spring", stiffness: 300, damping: 22 }}
               className="group block rounded-3xl border border-hair bg-white p-6 transition-colors hover:border-[#cfcfc8]"
