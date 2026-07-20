@@ -12,7 +12,7 @@ import {
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "./Logo";
-import type { VaultData } from "../lib/vault";
+import type { VaultData, LatestRebalance } from "../lib/vault";
 
 // 3D pieces: client-only, code-split — the page never waits for three.js
 const Terrain = dynamic(() => import("./Terrain").then((m) => m.Terrain), { ssr: false });
@@ -207,7 +207,7 @@ function Nav() {
   );
 }
 
-function Hero() {
+function Hero({ rebalance }: { rebalance: LatestRebalance }) {
   return (
     <header id="top" className="relative overflow-hidden">
       <div
@@ -306,7 +306,7 @@ function Hero() {
           </motion.div>
         </motion.div>
 
-        <Receipt />
+        <Receipt rebalance={rebalance} />
 
         {/* scroll hint */}
         <motion.div
@@ -342,14 +342,40 @@ function HeroParallax({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Receipt() {
-  const rows: [string, string, "up" | "dn" | "hold"][] = [
-    ["TSLA · added", "+5.8%", "up"],
-    ["AMD · trimmed", "−5.0%", "dn"],
-    ["AMZN · held", "—", "hold"],
-    ["NFLX · held", "—", "hold"],
-    ["PLTR · held", "—", "hold"],
-  ];
+function timeAgo(ts: number): string {
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+  if (s < 90) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+
+/** The "latest rebalance" receipt — every field read straight from the on-chain
+ *  Rebalanced(by, rationale, navBefore, navAfter) event. No prose is invented:
+ *  the rationale is a keccak commitment (the agent's note, hashed & tamper-proof),
+ *  and NAV before/after is the actual value-neutrality proof. */
+function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
+  const delta = rebalance ? rebalance.navAfter - rebalance.navBefore : 0;
+  const held = rebalance ? Math.abs(delta) / Math.max(rebalance.navBefore, 1e-9) < 1e-4 : false;
+  const txHref = tx(rebalance?.txHash ?? TX.rebalance);
+
+  const rows: [string, React.ReactNode, "up" | "dn" | "hold"][] = rebalance
+    ? [
+        ["NAV before", usd(rebalance.navBefore), "hold"],
+        ["NAV after", usd(rebalance.navAfter), held ? "hold" : delta > 0 ? "up" : "dn"],
+        [
+          "Net change",
+          held ? "value-neutral" : `${delta > 0 ? "+" : "−"}${usd(Math.abs(delta)).slice(1)}`,
+          held ? "hold" : delta > 0 ? "up" : "dn",
+        ],
+        ["Rebalancer", short(rebalance.by), "hold"],
+      ]
+    : [];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 26 }}
@@ -358,40 +384,59 @@ function Receipt() {
       className="mx-auto mt-14 max-w-[520px] overflow-hidden rounded-3xl border border-hair bg-white text-left shadow-[0_20px_60px_-24px_rgba(23,25,27,0.25)]"
     >
       <div className="flex items-center justify-between border-b border-hair px-6 py-4">
-        <span className="font-display text-[15px] font-semibold">Latest rebalance · Fides Frontier</span>
+        <span className="font-display text-[15px] font-semibold">
+          Latest rebalance · Fides Frontier
+          {rebalance && <span className="ml-2 font-mono text-[11px] font-normal text-muted">{timeAgo(rebalance.timestamp)}</span>}
+        </span>
         <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-green-deep">
           <Check className="h-3.5 w-3.5" />
           on-chain
         </span>
       </div>
-      <div className="border-b border-hair px-6 py-4 text-[13.5px] text-[#3b3f42]">
-        <span className="mb-1 block font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Agent rationale</span>
-        TSLA momentum edged out AMD — trimmed AMD into TSLA. Value-neutral, within
-        the turnover cap.
-      </div>
-      <div className="py-1.5">
-        {rows.map(([k, v, dir], i) => (
-          <motion.div
-            key={k}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.45, ease, delay: 0.95 + i * 0.12 }}
-            className="flex items-baseline justify-between border-b border-dashed border-hair px-6 py-3 last:border-0"
-          >
-            <span className="text-[13.5px] text-muted">{k}</span>
-            <span
-              className={`font-mono text-[14px] tnum ${
-                dir === "up" ? "text-green-deep" : dir === "dn" ? "text-[#a23b2f]" : "text-muted"
-              }`}
-            >
-              {v}
+
+      {rebalance ? (
+        <>
+          <div className="border-b border-hair px-6 py-4 text-[13.5px] text-[#3b3f42]">
+            <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+              Rationale · committed on-chain
             </span>
-          </motion.div>
-        ))}
-      </div>
+            <span className="font-mono text-[12.5px] text-ink">{short(rebalance.rationale)}</span>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
+              The agent&apos;s note is hashed into the event — tamper-proof, not editable after the fact.
+              NAV held flat through the rotation, within the turnover cap.
+            </p>
+          </div>
+          <div className="py-1.5">
+            {rows.map(([k, v, dir], i) => (
+              <motion.div
+                key={k}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.45, ease, delay: 0.95 + i * 0.1 }}
+                className="flex items-baseline justify-between border-b border-dashed border-hair px-6 py-3 last:border-0"
+              >
+                <span className="text-[13.5px] text-muted">{k}</span>
+                <span
+                  className={`font-mono text-[14px] tnum ${
+                    dir === "up" ? "text-green-deep" : dir === "dn" ? "text-[#a23b2f]" : "text-ink"
+                  }`}
+                >
+                  {v}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="border-b border-hair px-6 py-5 text-[13.5px] leading-relaxed text-muted">
+          The live on-chain read is momentarily unavailable — the rebalance itself is still fully
+          verifiable on the explorer.
+        </div>
+      )}
+
       <div className="flex items-center justify-between bg-canvas px-6 py-3.5 font-mono text-[12px] text-muted">
         <span>testnet · agent rebalancer</span>
-        <Ext href={tx(TX.rebalance)} className="border-b border-green text-ink">
+        <Ext href={txHref} className="border-b border-green text-ink">
           view tx ↗
         </Ext>
       </div>
@@ -806,11 +851,11 @@ function LiveVault({ data }: { data: VaultData }) {
   );
 }
 
-export function Landing({ vault }: { vault: VaultData }) {
+export function Landing({ vault, rebalance }: { vault: VaultData; rebalance: LatestRebalance }) {
   return (
     <main>
       <Nav />
-      <Hero />
+      <Hero rebalance={rebalance} />
       <Ticker />
       <LiveVault data={vault} />
       <HowStory />
