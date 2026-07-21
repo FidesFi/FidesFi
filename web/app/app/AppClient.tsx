@@ -86,6 +86,7 @@ export function AppClient() {
   const [err, setErr] = useState<string | null>(null);
   const [loadStale, setLoadStale] = useState(false);
   const actionRef = useRef<HTMLDivElement>(null);
+  const disconnectedRef = useRef(false); // stay disconnected after an explicit disconnect
   const goToAction = (t: "mint" | "redeem") => {
     setTab(t);
     actionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -112,6 +113,7 @@ export function AppClient() {
   const connect = useCallback(async () => {
     if (!eth) return;
     setErr(null);
+    disconnectedRef.current = false;
     try {
       const accs = (await eth.request({ method: "eth_requestAccounts" })) as string[];
       if (accs[0]) setAccount(accs[0] as Address);
@@ -120,6 +122,15 @@ export function AppClient() {
       setErr((e as Error).message);
     }
   }, [eth, refreshChain]);
+
+  // UI-level disconnect: EIP-1193 has no true "disconnect", so we clear local state and stop
+  // auto-reflecting the wallet until the user connects again.
+  const disconnect = useCallback(() => {
+    disconnectedRef.current = true;
+    setAccount(null);
+    setChainOk(false);
+    setTxs([]);
+  }, []);
 
   const switchChain = useCallback(async () => {
     if (!eth) return;
@@ -209,7 +220,10 @@ export function AppClient() {
 
   useEffect(() => {
     if (!eth) return;
-    const onAccounts = (accs: unknown) => setAccount(((accs as string[])[0] as Address) ?? null);
+    const onAccounts = (accs: unknown) => {
+      if (disconnectedRef.current) return; // honor an explicit disconnect until the user reconnects
+      setAccount(((accs as string[])[0] as Address) ?? null);
+    };
     const onChain = () => refreshChain();
     eth.on?.("accountsChanged", onAccounts);
     eth.on?.("chainChanged", onChain);
@@ -305,41 +319,54 @@ export function AppClient() {
   const pill =
     "rounded-full bg-ink px-5 py-2.5 font-display text-[14px] font-medium text-canvas transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0";
 
-  if (!eth)
-    return (
-      <Gate title="No wallet detected">
-        This app talks to Robinhood Chain testnet through your wallet. Install MetaMask (or any
-        EIP-1193 wallet), then reload.
-      </Gate>
-    );
-
-  if (!account)
-    return (
-      <Gate title="Connect to launch">
-        Connect a wallet to mint and redeem the live testnet index. Testnet only — nothing here has
-        mainnet value.
-        <button onClick={connect} className={`${pill} mt-6`}>
-          Connect wallet
-        </button>
-        {err && <ErrLine msg={err} />}
-      </Gate>
-    );
-
-  if (!chainOk)
-    return (
-      <Gate title="Wrong network">
-        This vault lives on Robinhood Chain <b>testnet</b> (chain 46630). Switch — or let your
-        wallet add it.
-        <button onClick={switchChain} className={`${pill} mt-6`}>
-          Switch to RHC testnet
-        </button>
-        {err && <ErrLine msg={err} />}
-      </Gate>
-    );
+  const gate = !eth ? (
+    <Gate title="No wallet detected">
+      This app talks to Robinhood Chain testnet through your wallet. Install MetaMask (or any
+      EIP-1193 wallet), then reload.
+    </Gate>
+  ) : !account ? (
+    <Gate title="Connect to launch">
+      Connect a wallet to mint and redeem the live testnet index. Testnet only — nothing here has
+      mainnet value.
+      <button onClick={connect} className={`${pill} mt-6`}>
+        Connect wallet
+      </button>
+      {err && <ErrLine msg={err} />}
+    </Gate>
+  ) : !chainOk ? (
+    <Gate title="Wrong network">
+      This vault lives on Robinhood Chain <b>testnet</b> (chain 46630). Switch — or let your wallet
+      add it.
+      <button onClick={switchChain} className={`${pill} mt-6`}>
+        Switch to RHC testnet
+      </button>
+      {err && <ErrLine msg={err} />}
+    </Gate>
+  ) : null;
 
   return (
-    <div className="mx-auto max-w-[880px] px-6 pb-24">
-      {/* vault header */}
+    <div className="min-h-screen text-ink">
+      <AppHeader
+        hasWallet={!!eth}
+        account={account}
+        chainOk={chainOk}
+        onConnect={connect}
+        onDisconnect={disconnect}
+      />
+
+      <div className="mx-auto max-w-[880px] px-6 pt-12 pb-6">
+        <h1 className="font-display text-[clamp(1.7rem,3.2vw,2.2rem)] font-semibold tracking-[-0.02em]">
+          Mint &amp; redeem, straight from the contract.
+        </h1>
+        <p className="mt-2 max-w-[58ch] text-[14.5px] leading-relaxed text-muted">
+          No backend, no order book — your wallet talks to the vault. Deposit the basket to mint the
+          index token; burn it to take the basket back. Live on Robinhood Chain testnet.
+        </p>
+      </div>
+
+      {gate ?? (
+        <div className="mx-auto max-w-[880px] px-6 pb-24">
+          {/* vault header */}
       <div className="mb-6 rounded-3xl border border-hair bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -520,6 +547,8 @@ export function AppClient() {
           ))}
         </div>
       )}
+        </div>
+      )}
     </div>
   );
 }
@@ -622,6 +651,105 @@ function Metric({ label, value, good }: { label: string; value: string; good?: b
     <div>
       <div className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">{label}</div>
       <div className={`mt-1 font-mono text-[18px] font-medium tnum ${good ? "text-green-deep" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function AppHeader({
+  hasWallet,
+  account,
+  chainOk,
+  onConnect,
+  onDisconnect,
+}: {
+  hasWallet: boolean;
+  account: Address | null;
+  chainOk: boolean;
+  onConnect: () => void;
+  onDisconnect: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const link =
+    "rounded-full border border-hair bg-white px-4 py-2 font-display text-[13.5px] font-medium text-ink transition-colors hover:border-ink/30";
+  const dot = chainOk ? "bg-green" : "bg-[#c98a2b]";
+  return (
+    <div className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1180px] items-center justify-between px-4 py-3.5 sm:px-6">
+        <a href="/" className="flex items-center gap-2 font-display text-[16px] font-semibold tracking-tight">
+          <Logo className="h-5 w-auto" />
+          Fides
+          <span className="ml-1 hidden rounded-md bg-green/10 px-1.5 py-0.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.1em] text-green-deep sm:inline-block">
+            app · testnet
+          </span>
+        </a>
+        <div className="flex items-center gap-2">
+          {account ? (
+            <div className="relative">
+              <button
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="inline-flex items-center gap-2 rounded-full border border-hair bg-white px-3 py-2 font-mono text-[12.5px] text-ink transition-colors hover:border-ink/30"
+              >
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className={`absolute inline-flex h-full w-full rounded-full ${dot} opacity-60 motion-safe:animate-ping`} />
+                  <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dot}`} />
+                </span>
+                {account.slice(0, 6)}…{account.slice(-4)}
+                <span className="text-[10px] text-muted">▾</span>
+              </button>
+              {open && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-[220px] overflow-hidden rounded-2xl border border-hair bg-white shadow-[0_20px_60px_-24px_rgba(23,25,27,0.3)]">
+                    <div className="border-b border-hair px-4 py-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+                        Connected{chainOk ? "" : " · wrong network"}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[12.5px] text-ink">
+                        {account.slice(0, 8)}…{account.slice(-6)}
+                      </p>
+                    </div>
+                    <a
+                      href={`${EXPLORER}/address/${account}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-[13px] text-ink transition-colors hover:bg-ink/[0.03]"
+                    >
+                      View on explorer ↗
+                    </a>
+                    <button
+                      onClick={() => {
+                        onDisconnect();
+                        setOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 border-t border-hair px-4 py-2.5 text-left text-[13px] text-[#a23b2f] transition-colors hover:bg-[#a23b2f]/[0.05]"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : hasWallet ? (
+            <button
+              onClick={onConnect}
+              className="rounded-full bg-ink px-4 py-2 font-display text-[13.5px] font-medium text-canvas transition-transform hover:-translate-y-px"
+            >
+              Connect wallet
+            </button>
+          ) : null}
+          <a href="/docs" className={link}>
+            Docs
+          </a>
+          <a href="/" className={`group inline-flex items-center gap-2 ${link}`}>
+            <span aria-hidden className="text-green-deep transition-transform group-hover:-translate-x-0.5">
+              ←
+            </span>
+            Back to site
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
