@@ -425,12 +425,17 @@ function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
 
   const rows: [string, React.ReactNode, "up" | "dn" | "hold"][] = rebalance
     ? [
-        ["NAV before", usd(rebalance.navBefore), "hold"],
-        ["NAV after", usd(rebalance.navAfter), held ? "hold" : delta > 0 ? "up" : "dn"],
         [
-          "Net change",
-          held ? "value-neutral" : `${delta > 0 ? "+" : "−"}${usd(Math.abs(delta)).slice(1)}`,
-          held ? "hold" : delta > 0 ? "up" : "dn",
+          "Outcome",
+          held ? "value-neutral · held flat" : `${delta > 0 ? "+" : "−"}${usd(Math.abs(delta)).slice(1)}`,
+          held ? "up" : delta > 0 ? "up" : "dn",
+        ],
+        [
+          "Vault NAV · at this rebalance",
+          <span key="nav">
+            {usd(rebalance.navBefore)} <span className="text-muted">→</span> {usd(rebalance.navAfter)}
+          </span>,
+          "hold",
         ],
         ["Rebalancer", short(rebalance.by), "hold"],
       ]
@@ -443,11 +448,13 @@ function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
       transition={{ duration: 0.7, ease, delay: 0.55 }}
       className="mx-auto mt-14 max-w-[520px] overflow-hidden rounded-3xl border border-hair bg-white text-left shadow-[0_20px_60px_-24px_rgba(23,25,27,0.25)]"
     >
-      <div className="flex items-center justify-between border-b border-hair px-6 py-4">
-        <span className="font-display text-[15px] font-semibold">
-          Latest rebalance · Fides Frontier
-          {rebalance && <span className="ml-2 font-mono text-[11px] font-normal text-muted">{timeAgo(rebalance.timestamp)}</span>}
-        </span>
+      <div className="flex items-start justify-between border-b border-hair px-6 py-4">
+        <div>
+          <span className="font-display text-[15px] font-semibold">Last rebalance · Fides Frontier</span>
+          {rebalance && (
+            <span className="mt-0.5 block font-mono text-[11px] text-muted">recorded {timeAgo(rebalance.timestamp)}</span>
+          )}
+        </div>
         <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-green-deep">
           <Check className="h-3.5 w-3.5" />
           on-chain
@@ -456,6 +463,10 @@ function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
 
       {rebalance ? (
         <>
+          <p className="border-b border-hair px-6 py-3 text-[12.5px] leading-relaxed text-muted">
+            A snapshot of the agent&apos;s last move, exactly as it hit the chain — not a live figure. It
+            changes when the agent rebalances again, not when you mint or redeem.
+          </p>
           <div className="border-b border-hair px-6 py-4 text-[13.5px] text-[#3b3f42]">
             <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
               Rationale · committed on-chain
@@ -463,7 +474,6 @@ function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
             <span className="font-mono text-[12.5px] text-ink">{short(rebalance.rationale)}</span>
             <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
               The agent&apos;s note is hashed into the event — tamper-proof, not editable after the fact.
-              NAV held flat through the rotation, within the turnover cap.
             </p>
           </div>
           <div className="py-1.5">
