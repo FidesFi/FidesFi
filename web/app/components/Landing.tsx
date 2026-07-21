@@ -32,11 +32,8 @@ const LINKS = {
   vault: `${EXPLORER}/address/${VAULT}`,
 };
 const tx = (h: string) => `${EXPLORER}/tx/${h}`;
-const TX = {
-  rebalance: "0x1c00daa3a0ea3f7db0191a26d1b66456a4e8ce31278bbecc99da8b6abbebab32",
-  redeem: "0xb5efff6a5e72fdaea677d07c057e94d0ef2debeb4c30403191b7a79fdb0ba98f",
-  mint: "0x4f8a9a416df7e71d9ac0b8b518a063197a740c1ac5c9e8aaf6b46865e32f90df",
-};
+// only shown if the live rebalance read fails — the latest known rebalance tx
+const REBALANCE_FALLBACK_TX = "0xea6f2f353ba787548507dd6d899672f51b2da9eba600da3a67490f1fc13ec49e";
 const short = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
 
 const fadeUp: Variants = {
@@ -424,7 +421,7 @@ const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigi
 function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
   const delta = rebalance ? rebalance.navAfter - rebalance.navBefore : 0;
   const held = rebalance ? Math.abs(delta) / Math.max(rebalance.navBefore, 1e-9) < 1e-4 : false;
-  const txHref = tx(rebalance?.txHash ?? TX.rebalance);
+  const txHref = tx(rebalance?.txHash ?? REBALANCE_FALLBACK_TX);
 
   const rows: [string, React.ReactNode, "up" | "dn" | "hold"][] = rebalance
     ? [
