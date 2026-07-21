@@ -65,6 +65,8 @@ contract DeployFidesTestnet is Script {
                 maxSlippageBps: 100,
                 maxTurnoverBps: 5000,
                 rebalanceCooldown: 1 hours,
+                maxOracleAge: type(uint64).max,
+                sequencerUptimeFeed: address(0),
                 guardian: me,
                 rebalancer: me,
                 feeRecipient: me,

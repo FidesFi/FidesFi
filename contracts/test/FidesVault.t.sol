@@ -132,6 +132,8 @@ abstract contract FidesVaultTestBase is Test {
             maxSlippageBps: maxSlippageBps,
             maxTurnoverBps: maxTurnoverBps,
             rebalanceCooldown: COOLDOWN,
+            maxOracleAge: type(uint64).max,
+            sequencerUptimeFeed: address(0),
             guardian: guardian,
             rebalancer: rebalancer,
             feeRecipient: feeRecipient,
@@ -542,7 +544,7 @@ contract FidesVaultTest is FidesVaultTestBase {
         _mintShares(alice, 100e18);
         oracleA.setAnswer(0);
 
-        vm.expectRevert(bytes("oracle"));
+        vm.expectRevert(FidesVault.BadPrice.selector);
         vault.nav();
     }
 

@@ -54,6 +54,8 @@ contract FidesVaultRealBasketTest is Test {
             maxSlippageBps: 100, // 1%
             maxTurnoverBps: 5000, // 50%
             rebalanceCooldown: 1 days,
+            maxOracleAge: type(uint64).max,
+            sequencerUptimeFeed: address(0),
             guardian: guardian,
             rebalancer: rebalancer,
             feeRecipient: feeRecipient,

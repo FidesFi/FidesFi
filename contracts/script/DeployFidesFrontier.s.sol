@@ -45,6 +45,8 @@ contract DeployFidesFrontier is Script {
             maxSlippageBps: uint16(vm.envUint("FIDES_MAX_SLIPPAGE_BPS")),
             maxTurnoverBps: uint16(vm.envUint("FIDES_MAX_TURNOVER_BPS")),
             rebalanceCooldown: uint64(vm.envUint("FIDES_REBALANCE_COOLDOWN")),
+            maxOracleAge: uint64(vm.envUint("FIDES_MAX_ORACLE_AGE")),
+            sequencerUptimeFeed: vm.envOr("FIDES_SEQUENCER_FEED", address(0)),
             guardian: vm.envAddress("FIDES_GUARDIAN"),
             rebalancer: vm.envAddress("FIDES_REBALANCER"),
             feeRecipient: vm.envAddress("FIDES_FEE_RECIPIENT"),

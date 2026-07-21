@@ -69,6 +69,8 @@ contract FidesVaultRhcForkTest is Test {
             maxSlippageBps: 100,
             maxTurnoverBps: 5_000,
             rebalanceCooldown: 1 days,
+            maxOracleAge: type(uint64).max,
+            sequencerUptimeFeed: address(0),
             guardian: guardian,
             rebalancer: rebalancer,
             feeRecipient: feeRecipient,

@@ -48,6 +48,8 @@ contract FidesVault is ERC20 {
         uint16 maxSlippageBps; // immutable rebalance guardrail
         uint16 maxTurnoverBps; // immutable rebalance guardrail
         uint64 rebalanceCooldown; // immutable, seconds between rebalances
+        uint64 maxOracleAge; // immutable, max seconds since a feed's last update before it's stale
+        address sequencerUptimeFeed; // immutable, L2 sequencer feed (address(0) = skip the check)
         address guardian;
         address rebalancer;
         address feeRecipient;
@@ -67,7 +69,12 @@ contract FidesVault is ERC20 {
     uint16 public immutable maxSlippageBps;
     uint16 public immutable maxTurnoverBps;
     uint64 public immutable rebalanceCooldown;
+    uint64 public immutable maxOracleAge;
+    address public immutable sequencerUptimeFeed;
     IFidesRouter public immutable router;
+
+    /// @dev after the L2 sequencer restarts, wait this long before trusting prices again.
+    uint256 private constant SEQUENCER_GRACE = 3600;
 
     // --- guardian-mutable (never touches user funds) ---
     uint256 public supplyCap;
@@ -96,6 +103,9 @@ contract FidesVault is ERC20 {
     error TurnoverTooHigh();
     error BadConfig();
     error ZeroShares();
+    error BadPrice();
+    error StalePrice();
+    error SequencerDown();
 
     modifier onlyGuardian() {
         if (msg.sender != guardian) revert NotGuardian();
@@ -120,6 +130,7 @@ contract FidesVault is ERC20 {
         if (cfg.mintFeeBps > MAX_FEE_BPS) revert BadConfig();
         if (cfg.supplyCap > cfg.supplyCeiling) revert BadConfig();
         if (cfg.maxSlippageBps > 10_000 || cfg.maxTurnoverBps > 10_000) revert BadConfig();
+        if (cfg.maxOracleAge == 0) revert BadConfig();
         if (cfg.guardian == address(0) || cfg.feeRecipient == address(0) || cfg.router == address(0)) {
             revert BadConfig();
         }
@@ -140,6 +151,8 @@ contract FidesVault is ERC20 {
         maxSlippageBps = cfg.maxSlippageBps;
         maxTurnoverBps = cfg.maxTurnoverBps;
         rebalanceCooldown = cfg.rebalanceCooldown;
+        maxOracleAge = cfg.maxOracleAge;
+        sequencerUptimeFeed = cfg.sequencerUptimeFeed;
         router = IFidesRouter(cfg.router);
         guardian = cfg.guardian;
         rebalancer = cfg.rebalancer;
@@ -281,9 +294,18 @@ contract FidesVault is ERC20 {
     }
 
     function _value(address asset, uint256 amount) internal view returns (uint256) {
+        // L2 liveness: right after the sequencer restarts, feeds can be stale/manipulable.
+        address seq = sequencerUptimeFeed;
+        if (seq != address(0)) {
+            (, int256 up, uint256 since,,) = AggregatorV3Interface(seq).latestRoundData();
+            // forge-lint: disable-next-line(block-timestamp)
+            if (up != 0 || block.timestamp - since < SEQUENCER_GRACE) revert SequencerDown();
+        }
         AggregatorV3Interface o = oracleOf[asset];
         (, int256 answer,, uint256 updatedAt,) = o.latestRoundData();
-        require(answer > 0 && updatedAt != 0, "oracle");
+        if (answer <= 0 || updatedAt == 0) revert BadPrice();
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp - updatedAt > maxOracleAge) revert StalePrice();
         // forge-lint: disable-next-line(unsafe-typecast)
         return (amount * uint256(answer)) / (10 ** o.decimals());
     }
