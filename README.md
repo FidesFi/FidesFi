@@ -26,7 +26,7 @@ Source verified on [Sourcify](https://repo.sourcify.dev/contracts/full_match/466
 
 | Path | |
 |---|---|
-| `contracts/` | the vault, a one-click USDG zapper + **111 tests** (unit · fuzz · invariant · fork against live mainnet pools · adversarial). See `contracts/README.md`. |
+| `contracts/` | the vault, a one-click USDG zapper + **114 tests** (unit · fuzz · invariant · fork against live mainnet pools · adversarial). See `contracts/README.md`. |
 | `web/` | the live app + site (Next.js), deployed at [www.fidesfi.xyz](https://www.fidesfi.xyz) |
 | `brand/` | logo & assets |
 
@@ -47,7 +47,7 @@ An invariant test proves backing holds under randomized mint / redeem / rebalanc
 ## Build
 
 ```bash
-cd contracts && forge test              # 111 tests
+cd contracts && forge test              # 114 tests
 cd web && npm install && npm run dev    # the app + site
 ```
 
