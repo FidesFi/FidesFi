@@ -171,7 +171,7 @@ export default async function AgentPage() {
               <a href={`${EXPLORER}/address/${VAULT_ADDRESS}`} target="_blank" rel="noopener noreferrer" className="text-green-deep">
                 {short(VAULT_ADDRESS)} ↗
               </a>{" "}
-              · testnet
+              · mainnet
             </p>
           </>
         )}

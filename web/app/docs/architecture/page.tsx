@@ -72,10 +72,11 @@ export default function Architecture() {
         official oracle stack on Robinhood Chain. Oracles gate <i>rebalance quality</i> (slippage
         checks and NAV); they are intentionally <b>not</b> in the redemption path.
       </P>
-      <Callout title="Testnet note" tone="amber">
-        Chainlink stock feeds exist on mainnet only. The testnet deployment uses settable mock
-        oracles seeded to real prices so the full loop can run; the tokens themselves are genuine
-        Robinhood testnet stock tokens. Mainnet uses the verified Chainlink proxies.
+      <Callout title="Oracle note" tone="amber">
+        Mainnet uses the verified Chainlink feed proxies for all five constituents, with a
+        staleness bound and an optional L2 sequencer-uptime check. Oracles price rebalance
+        guardrails and NAV only — mint and redeem are in-kind and never read a price, so a
+        paused feed can never lock your exit.
       </Callout>
 
       <NextPage href="/docs/security" label="Security & invariants" />

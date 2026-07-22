@@ -4,19 +4,30 @@ Managed, fully-backed stock indexes on **Robinhood Chain** (chain 4663). One tok
 
 > Verify, don't trust. The agent can *manage* your basket. It can never *withdraw* it.
 
-**Live on testnet** → **[fidesfi-protocol.vercel.app](https://fidesfi-protocol.vercel.app)** — mint & redeem straight from the contract.
+**Live on mainnet** → **[www.fidesfi.xyz](https://www.fidesfi.xyz)** — mint & redeem straight from the contract.
+
+## Deployment (Robinhood Chain mainnet, 4663)
+
+| Contract | Address |
+|---|---|
+| **FidesVault** — "Fides Frontier" (fFRNT) | [`0x4504483Ea748e630A9368F44f0Ee5B4350462Db8`](https://robinhoodchain.blockscout.com/address/0x4504483Ea748e630A9368F44f0Ee5B4350462Db8) |
+| **FidesUniV4Router** — Uniswap v4 adapter | [`0x39ED467a3A8B42510FaE4a8179Af1C907EDD3175`](https://robinhoodchain.blockscout.com/address/0x39ED467a3A8B42510FaE4a8179Af1C907EDD3175) |
+
+Source verified on [Sourcify](https://repo.sourcify.dev/contracts/full_match/4663/0x4504483Ea748e630A9368F44f0Ee5B4350462Db8/) (exact match) and the explorer.
 
 ## Baskets
 
-- **Fides Frontier** — AI & compute: NVDA, AMD, MU, PLTR, GOOGL, SPCX
-- **Fides Blue** — mega-cap core: AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA
+- **Fides Frontier** (live) — NVDA, MSFT, TSLA, GOOGL, SPCX. Every name passed an on-chain
+  liquidity check (two-way Uniswap v4 depth vs USDG within ~1% of oracle), so the agent can
+  rebalance the entire basket permissionlessly.
+- **Fides Blue** (planned) — mega-cap core.
 
 ## What's here
 
 | Path | |
 |---|---|
-| `contracts/` | the vault, a one-click USDG zapper + **100 tests** (unit · fuzz · invariant · fork · adversarial). See `contracts/README.md`. |
-| `web/` | the live app + site (Next.js), deployed at [fidesfi-protocol.vercel.app](https://fidesfi-protocol.vercel.app) |
+| `contracts/` | the vault, a one-click USDG zapper + **111 tests** (unit · fuzz · invariant · fork against live mainnet pools · adversarial). See `contracts/README.md`. |
+| `web/` | the live app + site (Next.js), deployed at [www.fidesfi.xyz](https://www.fidesfi.xyz) |
 | `brand/` | logo & assets |
 
 ## The agent
@@ -36,7 +47,7 @@ An invariant test proves backing holds under randomized mint / redeem / rebalanc
 ## Build
 
 ```bash
-cd contracts && forge test              # 100 tests
+cd contracts && forge test              # 111 tests
 cd web && npm install && npm run dev    # the app + site
 ```
 
@@ -46,8 +57,8 @@ MIT — see [LICENSE](LICENSE). Covers the contracts and web app in this repo. T
 
 ## Status
 
-Preview / testnet. Not audited yet. Underlying stock tokens are debt instruments of Robinhood Assets (Jersey) Ltd — **not equity**, no voting rights. Nothing here is investment advice.
+Live on mainnet with a deliberately small supply cap that rises gradually. Not audited yet — an external audit comes before any large cap raise. Underlying stock tokens are debt instruments of Robinhood Assets (Jersey) Ltd — **not equity**, no voting rights. Nothing here is investment advice.
 
 ---
 
-**$FIDES** · on Robinhood Chain · [@FidesFi](https://x.com/FidesFi) · [live app](https://fidesfi-protocol.vercel.app)
+**$FIDES** · on Robinhood Chain · [@FidesFi](https://x.com/FidesFi) · [live app](https://www.fidesfi.xyz)

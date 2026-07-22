@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 // avoids CORS / flaky wallet RPCs. Writes still go through the user's wallet.
 // Tries each upstream in order; one transient 429/5xx from Alchemy shouldn't surface to the UI.
 const UPSTREAMS = [
-  process.env.RHC_TESTNET_RPC,
-  "https://rpc.testnet.chain.robinhood.com",
+  process.env.RHC_MAINNET_RPC,
+  "https://rpc.mainnet.chain.robinhood.com",
 ].filter(Boolean) as string[];
 
 export async function POST(req: NextRequest) {

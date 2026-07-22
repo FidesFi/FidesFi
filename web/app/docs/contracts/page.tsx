@@ -1,11 +1,13 @@
 import { H1, H2, P, Callout, Table, Code, Mono } from "../ui";
 
-const EXPLORER = "https://explorer.testnet.chain.robinhood.com";
-const VAULT = "0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94";
+const EXPLORER = "https://robinhoodchain.blockscout.com";
+const TESTNET_EXPLORER = "https://explorer.testnet.chain.robinhood.com";
+const VAULT = "0x4504483Ea748e630A9368F44f0Ee5B4350462Db8";
+const ROUTER = "0x39ED467a3A8B42510FaE4a8179Af1C907EDD3175";
 
-const A = ({ path, children }: { path: string; children: React.ReactNode }) => (
+const A = ({ path, base = EXPLORER, children }: { path: string; base?: string; children: React.ReactNode }) => (
   <a
-    href={`${EXPLORER}/${path}`}
+    href={`${base}/${path}`}
     target="_blank"
     rel="noopener noreferrer"
     className="border-b border-green font-mono text-[12.5px] text-ink"
@@ -21,78 +23,85 @@ export default function Contracts() {
       <H1 kicker="Docs · live records">Contracts &amp; addresses</H1>
 
       <P>
-        Everything below is live on Robinhood Chain <b>testnet</b> (chain id <Mono>46630</Mono>,
-        explorer <Mono>explorer.testnet.chain.robinhood.com</Mono>). Don&apos;t take the docs&apos;
-        word for any of it — every row links to the chain.
+        Everything below is live on Robinhood Chain <b>mainnet</b> (chain id <Mono>4663</Mono>,
+        explorer <Mono>robinhoodchain.blockscout.com</Mono>). Don&apos;t take the docs&apos; word
+        for any of it — every row links to the chain.
       </P>
 
-      <H2 id="vault">The live vault</H2>
+      <H2 id="vault">The live vault — Fides Frontier</H2>
       <Table
         head={["Contract", "Address"]}
         rows={[
           [
-            <span key="v"><b>FidesVault</b> — &quot;Fides Frontier (testnet, real assets)&quot;</span>,
+            <span key="v"><b>FidesVault</b> — &quot;Fides Frontier&quot; (fFRNT)</span>,
             <A key="va" path={`address/${VAULT}`}>{short(VAULT)} ↗</A>,
           ],
           [
-            <span key="r"><b>FidesUniV4Router</b> — swap adapter</span>,
-            <A key="ra" path="address/0xBa8DbbE3C24B38ea48acc2d530331aD8aFc90998">{short("0xBa8DbbE3C24B38ea48acc2d530331aD8aFc90998")} ↗</A>,
+            <span key="r"><b>FidesUniV4Router</b> — Uniswap v4 swap adapter</span>,
+            <A key="ra" path={`address/${ROUTER}`}>{short(ROUTER)} ↗</A>,
           ],
         ]}
       />
 
-      <H2 id="basket">The basket — real Robinhood testnet stock tokens</H2>
+      <H2 id="basket">The basket — real Robinhood stock tokens</H2>
+      <P>
+        Five names, chosen by on-chain liquidity checks (two-way Uniswap v4 depth vs USDG within
+        ~1% of oracle) so the agent can rebalance every leg permissionlessly.
+      </P>
       <Table
-        head={["Stock", "Token address"]}
+        head={["Stock", "Token", "Chainlink feed"]}
         rows={[
-          ["Tesla (TSLA)", <A key="1" path="address/0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E">{short("0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E")} ↗</A>],
-          ["AMD (AMD)", <A key="2" path="address/0x71178BAc73cBeb415514eB542a8995b82669778d">{short("0x71178BAc73cBeb415514eB542a8995b82669778d")} ↗</A>],
-          ["Amazon (AMZN)", <A key="3" path="address/0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02">{short("0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02")} ↗</A>],
-          ["Netflix (NFLX)", <A key="4" path="address/0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93">{short("0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93")} ↗</A>],
-          ["Palantir (PLTR)", <A key="5" path="address/0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0">{short("0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0")} ↗</A>],
+          ["NVIDIA (NVDA)", <A key="1" path="address/0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC">{short("0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC")} ↗</A>, <A key="1f" path="address/0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15">{short("0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15")} ↗</A>],
+          ["Microsoft (MSFT)", <A key="2" path="address/0xe93237C50D904957Cf27E7B1133b510C669c2e74">{short("0xe93237C50D904957Cf27E7B1133b510C669c2e74")} ↗</A>, <A key="2f" path="address/0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E">{short("0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E")} ↗</A>],
+          ["Tesla (TSLA)", <A key="3" path="address/0x322F0929c4625eD5bAd873c95208D54E1c003b2d">{short("0x322F0929c4625eD5bAd873c95208D54E1c003b2d")} ↗</A>, <A key="3f" path="address/0x4A1166a659A55625345e9515b32adECea5547C38">{short("0x4A1166a659A55625345e9515b32adECea5547C38")} ↗</A>],
+          ["Alphabet (GOOGL)", <A key="4" path="address/0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3">{short("0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3")} ↗</A>, <A key="4f" path="address/0xF6f373a037c30F0e5010d854385cA89185AE638b">{short("0xF6f373a037c30F0e5010d854385cA89185AE638b")} ↗</A>],
+          ["SpaceX (SPCX)", <A key="5" path="address/0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa">{short("0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa")} ↗</A>, <A key="5f" path="address/0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb">{short("0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb")} ↗</A>],
         ]}
       />
 
-      <H2 id="proof">The proven loop — receipts</H2>
+      <H2 id="proof">The proven loop — rehearsal receipts (testnet)</H2>
+      <P>
+        Before mainnet, the identical contract suite ran the full loop on RHC testnet (chain
+        46630) with real testnet stock tokens. Those receipts stay public:
+      </P>
       <Table
         head={["Operation", "What happened", "Transaction"]}
         rows={[
           [
             <b key="m">Mint</b>,
-            "deposited the 5-stock basket → minted 1 index token, fully backed",
-            <A key="mt" path="tx/0x4f8a9a416df7e71d9ac0b8b518a063197a740c1ac5c9e8aaf6b46865e32f90df">{short("0x4f8a9a416df7e71d9ac0b8b518a063197a740c1ac5c9e8aaf6b46865e32f90df")} ↗</A>,
+            "deposited the basket → minted 1 index token, fully backed",
+            <A key="mt" base={TESTNET_EXPLORER} path="tx/0x4f8a9a416df7e71d9ac0b8b518a063197a740c1ac5c9e8aaf6b46865e32f90df">{short("0x4f8a9a416df7e71d9ac0b8b518a063197a740c1ac5c9e8aaf6b46865e32f90df")} ↗</A>,
           ],
           [
             <b key="rb">Rebalance</b>,
-            "agent trimmed AMD → added TSLA; fully backed before and after; supply untouched",
-            <A key="rbt" path="tx/0x1c00daa3a0ea3f7db0191a26d1b66456a4e8ce31278bbecc99da8b6abbebab32">{short("0x1c00daa3a0ea3f7db0191a26d1b66456a4e8ce31278bbecc99da8b6abbebab32")} ↗</A>,
+            "agent rotated weights through its policy gate; fully backed before and after",
+            <A key="rbt" base={TESTNET_EXPLORER} path="tx/0xa02e4de859ce1ac7507d5a31ef18d4ebf1cae7534e3e37398c30d362fde4debc">{short("0xa02e4de859ce1ac7507d5a31ef18d4ebf1cae7534e3e37398c30d362fde4debc")} ↗</A>,
           ],
           [
             <b key="rd">Redeem</b>,
-            "burned 0.5 index token → all 5 stocks returned in-kind, one tx",
-            <A key="rdt" path="tx/0xb5efff6a5e72fdaea677d07c057e94d0ef2debeb4c30403191b7a79fdb0ba98f">{short("0xb5efff6a5e72fdaea677d07c057e94d0ef2debeb4c30403191b7a79fdb0ba98f")} ↗</A>,
+            "burned 0.5 index token → all stocks returned in-kind, one tx",
+            <A key="rdt" base={TESTNET_EXPLORER} path="tx/0xb5efff6a5e72fdaea677d07c057e94d0ef2debeb4c30403191b7a79fdb0ba98f">{short("0xb5efff6a5e72fdaea677d07c057e94d0ef2debeb4c30403191b7a79fdb0ba98f")} ↗</A>,
           ],
         ]}
       />
 
       <H2 id="verify">Verify it yourself</H2>
-      <P>With Foundry&apos;s <Mono>cast</Mono> against any testnet RPC:</P>
+      <P>With Foundry&apos;s <Mono>cast</Mono> against any RHC mainnet RPC:</P>
       <Code>{`# is one token still fully backed by the basket?
-cast call ${VAULT} "isFullyBacked()(bool)" --rpc-url https://rpc.testnet.chain.robinhood.com
+cast call ${VAULT} "isFullyBacked()(bool)" --rpc-url https://rpc.mainnet.chain.robinhood.com
 
 # portfolio value (USD, 18 decimals) and supply
-cast call ${VAULT} "nav()(uint256)"         --rpc-url https://rpc.testnet.chain.robinhood.com
-cast call ${VAULT} "totalSupply()(uint256)" --rpc-url https://rpc.testnet.chain.robinhood.com
+cast call ${VAULT} "nav()(uint256)"         --rpc-url https://rpc.mainnet.chain.robinhood.com
+cast call ${VAULT} "totalSupply()(uint256)" --rpc-url https://rpc.mainnet.chain.robinhood.com
 
-# what the vault actually holds (e.g. TSLA)
-cast call 0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E \\
+# what the vault actually holds (e.g. NVDA)
+cast call 0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC \\
   "balanceOf(address)(uint256)" ${VAULT} \\
-  --rpc-url https://rpc.testnet.chain.robinhood.com`}</Code>
+  --rpc-url https://rpc.mainnet.chain.robinhood.com`}</Code>
 
-      <Callout title="Mainnet">
-        Mainnet (chain 4663) deployment config is prepared with on-chain-verified addresses — the
-        USDG quote, the stock tokens, the Chainlink feed proxies, and the Uniswap v4 PoolManager —
-        and ships after the hardening pass. Source and deploy scripts are public on{" "}
+      <Callout title="Source">
+        Contract source is verified on the explorer, and the full repo — contracts, tests, deploy
+        scripts — is public on{" "}
         <a href="https://github.com/FidesFi/FidesFi" target="_blank" rel="noopener noreferrer" className="border-b border-green text-ink">
           GitHub
         </a>.

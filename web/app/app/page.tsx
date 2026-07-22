@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { AppClient } from "./AppClient";
 
 export const metadata: Metadata = {
-  title: "Fides App — mint & redeem on testnet",
-  description: "Mint and redeem the live Fides index on Robinhood Chain testnet.",
+  title: "Fides App — mint & redeem on Robinhood Chain",
+  description: "Mint and redeem the live Fides index on Robinhood Chain mainnet.",
 };
 
 // The app is wallet-stateful end to end (header chip included), so it lives in one client tree.

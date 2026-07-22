@@ -78,9 +78,9 @@ export default function Security() {
             it cannot lock your exit.
           </>,
           <>
-            <b>Testnet ≠ mainnet.</b> Current deployment is testnet with mock feeds. Mainnet ships
-            after a final hardening pass (sequencer-uptime check, oracle-pause handling, route
-            fork-testing against live pools).
+            <b>Early-stage deployment.</b> Mainnet is live with a deliberately small supply cap
+            that rises gradually, and the suite is fork-tested against live pools — but the code
+            is young and unaudited. An external audit comes before any large cap raise.
           </>,
         ]}
       />

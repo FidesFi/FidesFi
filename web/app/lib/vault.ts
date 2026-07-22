@@ -1,17 +1,17 @@
 import { createPublicClient, decodeEventLog, http, formatUnits } from "viem";
 
-// RHC testnet (46630). Public RPC works with VPN; override with RHC_TESTNET_RPC (e.g. Alchemy) in prod.
-const RPC = process.env.RHC_TESTNET_RPC ?? "https://rpc.testnet.chain.robinhood.com";
-export const VAULT_ADDRESS = "0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94" as const;
+// RHC mainnet (4663). Override with RHC_MAINNET_RPC (e.g. Alchemy) in prod.
+const RPC = process.env.RHC_MAINNET_RPC ?? "https://rpc.mainnet.chain.robinhood.com";
+export const VAULT_ADDRESS = "0x4504483Ea748e630A9368F44f0Ee5B4350462Db8" as const;
 
-const rhcTestnet = {
-  id: 46630,
-  name: "Robinhood Chain Testnet",
+const rhcChain = {
+  id: 4663,
+  name: "Robinhood Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: [RPC] } },
 } as const;
 
-const client = createPublicClient({ chain: rhcTestnet, transport: http(RPC) });
+const client = createPublicClient({ chain: rhcChain, transport: http(RPC) });
 
 const vaultAbi = [
   { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
@@ -110,21 +110,20 @@ const rebalancedEvent = {
 // keccak256("Rebalanced(address,bytes32,uint256,uint256)") — topic0 for the receipt-scan fallback
 const REBALANCED_TOPIC = "0xcf986d19c22854be6987b1926a0867c513f4b216f16c38b5fc864c783c7030b9";
 
-// the vault came online just before its first rebalance; scanning from here keeps
-// the getLogs range bounded while still catching every rebalance, past and future.
-const REBALANCE_SCAN_FROM = 91_000_000n;
+// the vault deployed at mainnet block 16,109,827; scanning from just before keeps the
+// getLogs range bounded while still catching every event, past and future.
+const REBALANCE_SCAN_FROM = 16_109_800n;
 
-// The public RHC RPC allows full-range eth_getLogs; the Alchemy endpoint we use for
+// The public RHC RPC allows wide-range eth_getLogs; the Alchemy endpoint we use for
 // contract reads caps it at a 10-block range on the free tier. So we scan the event on
 // the public RPC, and fall back to reading a known rebalance tx's receipt on the main
 // RPC (getTransactionReceipt has no range limit). Either path reads values live off-chain.
-const PUBLIC_RPC = "https://rpc.testnet.chain.robinhood.com";
-const publicClient = createPublicClient({ chain: rhcTestnet, transport: http(PUBLIC_RPC, { timeout: 5_000 }) });
+const PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
+const publicClient = createPublicClient({ chain: rhcChain, transport: http(PUBLIC_RPC, { timeout: 5_000 }) });
 
 // pointer to the newest known rebalance, used only by the fallback path; the agent bumps
-// this (env override) after each run. The displayed values are still read live from chain.
-const KNOWN_REBALANCE_TX = (process.env.LATEST_REBALANCE_TX ??
-  "0xea6f2f353ba787548507dd6d899672f51b2da9eba600da3a67490f1fc13ec49e") as `0x${string}`;
+// this (env override) after each run. Empty until the first mainnet rebalance lands.
+const KNOWN_REBALANCE_TX = (process.env.LATEST_REBALANCE_TX ?? "") as `0x${string}`;
 
 export type LatestRebalance = {
   by: `0x${string}`;
@@ -173,6 +172,7 @@ export async function getLatestRebalance(): Promise<LatestRebalance> {
   }
 
   // 2) fallback: decode the known rebalance tx's receipt on the main RPC (no range limit)
+  if (!KNOWN_REBALANCE_TX) return null; // no mainnet rebalance pinned yet
   try {
     const receipt = await client.getTransactionReceipt({ hash: KNOWN_REBALANCE_TX });
     const log = receipt.logs.find(

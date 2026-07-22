@@ -1,15 +1,16 @@
 /* Client-side chain config + ABIs for the /app page (viem, wallet-provider transport). */
 
-export const CHAIN_ID = 46630;
-export const CHAIN_ID_HEX = "0xb626"; // 46630
-export const EXPLORER = "https://explorer.testnet.chain.robinhood.com";
-export const VAULT_ADDRESS = "0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94" as const;
+export const CHAIN_ID = 4663;
+export const CHAIN_ID_HEX = "0x1237"; // 4663
+export const EXPLORER = "https://robinhoodchain.blockscout.com";
+export const VAULT_ADDRESS = "0x4504483Ea748e630A9368F44f0Ee5B4350462Db8" as const;
+export const RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
 
-export const rhcTestnet = {
+export const rhcChain = {
   id: CHAIN_ID,
-  name: "Robinhood Chain Testnet",
+  name: "Robinhood Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.testnet.chain.robinhood.com"] } },
+  rpcUrls: { default: { http: [RPC_URL] } },
   blockExplorers: { default: { name: "Blockscout", url: EXPLORER } },
 } as const;
 
@@ -22,9 +23,9 @@ export const addChainParams: {
   blockExplorerUrls: string[];
 } = {
   chainId: CHAIN_ID_HEX as `0x${string}`,
-  chainName: "Robinhood Chain Testnet",
+  chainName: "Robinhood Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: ["https://rpc.testnet.chain.robinhood.com"],
+  rpcUrls: [RPC_URL],
   blockExplorerUrls: [EXPLORER],
 };
 

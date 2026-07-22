@@ -64,8 +64,12 @@ contract DeployFidesFrontier is Script {
         }
 
         vm.startBroadcast();
+        (, address broadcaster,) = vm.readCallers();
 
-        FidesUniV4Router router = new FidesUniV4Router(IPoolManager(poolManager), owner);
+        // Router starts owned by the broadcaster so route wiring below succeeds, then ownership
+        // moves to FIDES_OWNER. Deploying it directly with `owner` would make setRoute revert
+        // whenever the deployer key differs from the owner address.
+        FidesUniV4Router router = new FidesUniV4Router(IPoolManager(poolManager), broadcaster);
         cfg.router = address(router);
 
         FidesVault vault = new FidesVault("Fides Frontier", "fFRNT", tokens, units, oracles, cfg);
@@ -75,6 +79,8 @@ contract DeployFidesFrontier is Script {
         if (vm.envOr("FIDES_WIRE_ROUTES", false)) {
             _wireRoutesViaQuote(router, tokens, quote, poolFees, poolSpacings, poolHooks);
         }
+
+        if (owner != broadcaster) router.transferOwnership(owner);
 
         vm.stopBroadcast();
 

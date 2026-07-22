@@ -22,9 +22,9 @@ const HowSteps = dynamic(() => import("./HowStory").then((m) => m.HowSteps), { s
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-/* ---------- real on-chain links (RHC testnet 46630) ---------- */
-const EXPLORER = "https://explorer.testnet.chain.robinhood.com";
-const VAULT = "0x1Fb3f8c9569bd45D1D7b9417Cb7aDa64D7552A94";
+/* ---------- real on-chain links (RHC mainnet 4663) ---------- */
+const EXPLORER = "https://robinhoodchain.blockscout.com";
+const VAULT = "0x4504483Ea748e630A9368F44f0Ee5B4350462Db8";
 const LINKS = {
   github: "https://github.com/FidesFi/FidesFi",
   x: "https://x.com/FidesFi",
@@ -32,8 +32,8 @@ const LINKS = {
   vault: `${EXPLORER}/address/${VAULT}`,
 };
 const tx = (h: string) => `${EXPLORER}/tx/${h}`;
-// only shown if the live rebalance read fails — the latest known rebalance tx
-const REBALANCE_FALLBACK_TX = "0xea6f2f353ba787548507dd6d899672f51b2da9eba600da3a67490f1fc13ec49e";
+// only shown if the live rebalance read fails — empty until the first mainnet rebalance is pinned
+const REBALANCE_FALLBACK_TX = "";
 const short = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
 
 const fadeUp: Variants = {
@@ -353,7 +353,7 @@ function Hero({ rebalance }: { rebalance: LatestRebalance }) {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-green opacity-60 motion-safe:animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green" />
               </span>
-              live on testnet
+              live on mainnet
             </span>
             <span className="text-hair">·</span>
             <Ext
@@ -421,7 +421,12 @@ const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigi
 function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
   const delta = rebalance ? rebalance.navAfter - rebalance.navBefore : 0;
   const held = rebalance ? Math.abs(delta) / Math.max(rebalance.navBefore, 1e-9) < 1e-4 : false;
-  const txHref = tx(rebalance?.txHash ?? REBALANCE_FALLBACK_TX);
+  // no rebalance yet (fresh vault) and nothing pinned -> point at the vault itself
+  const txHref = rebalance?.txHash
+    ? tx(rebalance.txHash)
+    : REBALANCE_FALLBACK_TX
+      ? tx(REBALANCE_FALLBACK_TX)
+      : LINKS.vault;
 
   const rows: [string, React.ReactNode, "up" | "dn" | "hold"][] = rebalance
     ? [
@@ -499,15 +504,15 @@ function Receipt({ rebalance }: { rebalance: LatestRebalance }) {
         </>
       ) : (
         <div className="border-b border-hair px-6 py-5 text-[13.5px] leading-relaxed text-muted">
-          The live on-chain read is momentarily unavailable — the rebalance itself is still fully
-          verifiable on the explorer.
+          No rebalance on mainnet yet — the vault is freshly deployed. The agent&apos;s first move
+          will appear here, straight from the on-chain event.
         </div>
       )}
 
       <div className="flex items-center justify-between bg-canvas px-6 py-3.5 font-mono text-[12px] text-muted">
-        <span>testnet · agent rebalancer</span>
+        <span>mainnet · agent rebalancer</span>
         <Ext href={txHref} className="border-b border-green text-ink">
-          view tx ↗
+          {rebalance ? "view tx ↗" : "view vault ↗"}
         </Ext>
       </div>
     </motion.div>
@@ -560,7 +565,7 @@ function Ticker() {
 }
 
 function Baskets({ vault }: { vault: VaultData }) {
-  const frontierHolds = vault?.holdings.length ? vault.holdings.map((h) => h.symbol) : ["TSLA", "AMD", "AMZN", "NFLX", "PLTR"];
+  const frontierHolds = vault?.holdings.length ? vault.holdings.map((h) => h.symbol) : ["NVDA", "MSFT", "TSLA", "GOOGL", "SPCX"];
   const cards = [
     {
       name: "Fides Frontier",
@@ -601,7 +606,7 @@ function Baskets({ vault }: { vault: VaultData }) {
         </h2>
         <p className="max-w-[46ch] text-[15px] text-muted">
           Each basket is a single token backed 1:1 by its tokenized stocks, rotated by the
-          agent on schedule. Frontier is live on testnet; Blue is next.
+          agent on schedule. Frontier is live on mainnet; Blue is next.
         </p>
       </Reveal>
 
@@ -621,7 +626,7 @@ function Baskets({ vault }: { vault: VaultData }) {
                 </div>
                 {b.live ? (
                   <span className="rounded-full bg-green/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-green-deep">
-                    ● live · testnet
+                    ● live · mainnet
                   </span>
                 ) : (
                   <span className="rounded-full border border-hair px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
@@ -748,8 +753,8 @@ function Ledger({ rows }: { rows: LedgerRow[] }) {
 
       {rows.length === 0 ? (
         <Reveal className="rounded-2xl border border-hair bg-white px-5 py-6 text-[14px] leading-relaxed text-muted">
-          The live feed is momentarily unavailable — every mint, redeem, and rebalance stays fully
-          verifiable on the explorer.
+          No activity on mainnet yet — the vault is freshly deployed. The first mint, redeem, and
+          rebalance will appear here, read live from the vault&apos;s own events.
         </Reveal>
       ) : (
         <div className="relative pl-6">
@@ -798,9 +803,9 @@ function Footer() {
     <footer className="border-t border-hair py-12">
       <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-5 px-6">
         <p className="max-w-[60ch] text-[12.5px] leading-relaxed text-muted">
-          Fides is a preview build on testnet — index figures are illustrative; ledger
-          entries are real on-chain transactions. Underlying stock tokens are debt
-          instruments of Robinhood Assets (Jersey) Ltd, not equity. Not investment advice.
+          Fides is live on Robinhood Chain mainnet — vault figures and ledger entries are
+          real on-chain reads. Underlying stock tokens are debt instruments of Robinhood
+          Assets (Jersey) Ltd, not equity. Early-stage software; not investment advice.
         </p>
         <div className="flex gap-5 font-mono text-[13px]">
           {links.map(([label, href]) =>
@@ -841,7 +846,7 @@ function LiveVault({ data }: { data: VaultData }) {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-green opacity-60 motion-safe:animate-ping" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-green" />
               </span>
-              <span className="font-display text-[15px] font-semibold">Live on testnet · {data.name}</span>
+              <span className="font-display text-[15px] font-semibold">Live on mainnet · {data.name}</span>
             </div>
             <Ext href={LINKS.vault} className="font-mono text-[12.5px] text-green-deep">
               {short(VAULT)} ↗

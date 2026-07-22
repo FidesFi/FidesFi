@@ -22,7 +22,7 @@ import {
   erc20Abi,
   redeemPayout,
   requiredDeposit,
-  rhcTestnet,
+  rhcChain,
   vaultAbi,
 } from "../lib/appchain";
 
@@ -96,9 +96,9 @@ export function AppClient() {
 
   // Reads go through our same-origin proxy (-> Alchemy server-side): reliable regardless of the
   // wallet's own RPC config, no CORS, key never reaches the browser. The wallet only signs.
-  const pub = useMemo(() => createPublicClient({ chain: rhcTestnet, transport: http("/api/rpc") }), []);
+  const pub = useMemo(() => createPublicClient({ chain: rhcChain, transport: http("/api/rpc") }), []);
   const wallet = useMemo(
-    () => (eth ? createWalletClient({ chain: rhcTestnet, transport: custom(eth) }) : null),
+    () => (eth ? createWalletClient({ chain: rhcChain, transport: custom(eth) }) : null),
     [eth],
   );
 
@@ -286,7 +286,7 @@ export function AppClient() {
         functionName: "approve",
         args: [VAULT_ADDRESS, row.need],
         account: account!,
-        chain: rhcTestnet,
+        chain: rhcChain,
       }),
     );
 
@@ -298,7 +298,7 @@ export function AppClient() {
         functionName: "mint",
         args: [shares, account!],
         account: account!,
-        chain: rhcTestnet,
+        chain: rhcChain,
       }),
     );
 
@@ -310,7 +310,7 @@ export function AppClient() {
         functionName: "redeem",
         args: [shares, account!],
         account: account!,
-        chain: rhcTestnet,
+        chain: rhcChain,
       }),
     );
 
@@ -321,13 +321,13 @@ export function AppClient() {
 
   const gate = !eth ? (
     <Gate title="No wallet detected">
-      This app talks to Robinhood Chain testnet through your wallet. Install MetaMask (or any
+      This app talks to Robinhood Chain through your wallet. Install MetaMask (or any
       EIP-1193 wallet), then reload.
     </Gate>
   ) : !account ? (
     <Gate title="Connect to launch">
-      Connect a wallet to mint and redeem the live testnet index. Testnet only — nothing here has
-      mainnet value.
+      Connect a wallet to mint and redeem the live index on Robinhood Chain mainnet. Real
+      assets — mint pulls the actual stock-token basket from your wallet.
       <button onClick={connect} className={`${pill} mt-6`}>
         Connect wallet
       </button>
@@ -335,10 +335,10 @@ export function AppClient() {
     </Gate>
   ) : !chainOk ? (
     <Gate title="Wrong network">
-      This vault lives on Robinhood Chain <b>testnet</b> (chain 46630). Switch — or let your wallet
+      This vault lives on Robinhood Chain <b>mainnet</b> (chain 4663). Switch — or let your wallet
       add it.
       <button onClick={switchChain} className={`${pill} mt-6`}>
-        Switch to RHC testnet
+        Switch to Robinhood Chain
       </button>
       {err && <ErrLine msg={err} />}
     </Gate>
@@ -360,7 +360,7 @@ export function AppClient() {
         </h1>
         <p className="mt-2 max-w-[58ch] text-[14.5px] leading-relaxed text-muted">
           No backend, no order book — your wallet talks to the vault. Deposit the basket to mint the
-          index token; burn it to take the basket back. Live on Robinhood Chain testnet.
+          index token; burn it to take the basket back. Live on Robinhood Chain mainnet.
         </p>
       </div>
 
@@ -374,7 +374,7 @@ export function AppClient() {
               <span className="absolute inline-flex h-full w-full rounded-full bg-green opacity-60 motion-safe:animate-ping" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-green" />
             </span>
-            <span className="font-display text-[16px] font-semibold">Fides Frontier · testnet</span>
+            <span className="font-display text-[16px] font-semibold">Fides Frontier · mainnet</span>
           </div>
           <a
             href={`${EXPLORER}/address/${VAULT_ADDRESS}`}
@@ -516,8 +516,8 @@ export function AppClient() {
 
         {tab === "mint" && (
           <p className="mt-4 text-[12.5px] leading-relaxed text-muted">
-            Need testnet stocks? They come from the Robinhood testnet faucet (5 of each). This is
-            testnet — tokens carry no value.
+            Minting pulls the exact stock-token basket from your wallet — get the five constituents
+            on Robinhood Chain first (e.g. via a DEX). These are real assets; mind the amounts.
           </p>
         )}
       </div>
@@ -679,7 +679,7 @@ function AppHeader({
           <Logo className="h-5 w-auto" />
           Fides
           <span className="ml-1 hidden rounded-md bg-green/10 px-1.5 py-0.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.1em] text-green-deep sm:inline-block">
-            app · testnet
+            app · mainnet
           </span>
         </a>
         <div className="flex items-center gap-2">

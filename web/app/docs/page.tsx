@@ -48,11 +48,11 @@ export default function Overview() {
         arrow in it is a transaction anyone can verify.
       </P>
 
-      <Callout title="Status · testnet">
-        Fides is live on Robinhood Chain <b>testnet</b> (chain 46630): a vault backed by real
-        Robinhood testnet stock tokens, with mint, in-kind redemption, and an agent rebalance all
-        proven onchain. Contracts are open source with a 95-test suite. Mainnet comes after the
-        remaining hardening work — see{" "}
+      <Callout title="Status · mainnet">
+        Fides is live on Robinhood Chain <b>mainnet</b> (chain 4663): a vault backed by real
+        Robinhood stock tokens with verified Chainlink feeds, in-kind mint/redemption, and
+        agent rebalancing wired through live Uniswap v4 pools. Contracts are open source with a
+        111-test suite (unit, fuzz, invariant, and fork tests against mainnet state) — see{" "}
         <a href="/docs/contracts" className="border-b border-green text-ink">
           Contracts &amp; addresses
         </a>{" "}
