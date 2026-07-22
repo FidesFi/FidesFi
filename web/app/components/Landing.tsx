@@ -747,7 +747,10 @@ function Ledger({ rows }: { rows: LedgerRow[] }) {
         </h2>
         <p className="max-w-[46ch] text-[15px] text-muted">
           Every move, on-chain and in order — read live from the vault&apos;s own Mint,
-          Redeem, and Rebalanced events. Click any row to verify.
+          Redeem, and Rebalanced events. Click any row to verify.{" "}
+          <a href="/activity" className="whitespace-nowrap border-b border-green font-medium text-ink">
+            Full activity &amp; holders →
+          </a>
         </p>
       </Reveal>
 
@@ -796,6 +799,7 @@ function Footer() {
   const links: [string, string][] = [
     ["X", LINKS.x],
     ["Docs", LINKS.docs],
+    ["Activity", "/activity"],
     ["Explorer", LINKS.vault],
     ["GitHub", LINKS.github],
   ];

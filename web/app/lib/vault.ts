@@ -355,3 +355,187 @@ export async function getAgentData(): Promise<AgentData> {
     return null;
   }
 }
+
+/* ---------- the activity page: who transacted, live from events ---------- */
+
+export const ZAPPER = "0x351C442B70706D1208516BBda63ae9955Fda665e" as const;
+
+const transferEvent = {
+  type: "event",
+  name: "Transfer",
+  inputs: [
+    { name: "from", type: "address", indexed: true },
+    { name: "to", type: "address", indexed: true },
+    { name: "value", type: "uint256", indexed: false },
+  ],
+} as const;
+
+const zapMintEvent = {
+  type: "event",
+  name: "ZapMint",
+  inputs: [
+    { name: "caller", type: "address", indexed: true },
+    { name: "to", type: "address", indexed: true },
+    { name: "shares", type: "uint256", indexed: false },
+    { name: "usdgSpent", type: "uint256", indexed: false },
+  ],
+} as const;
+
+const zapRedeemEvent = {
+  type: "event",
+  name: "ZapRedeem",
+  inputs: [
+    { name: "caller", type: "address", indexed: true },
+    { name: "to", type: "address", indexed: true },
+    { name: "shares", type: "uint256", indexed: false },
+    { name: "usdgOut", type: "uint256", indexed: false },
+  ],
+} as const;
+
+export type ActivityRow = {
+  kind: "Zap in" | "Mint" | "Zap out" | "Redeem" | "Rebalance";
+  wallet: `0x${string}`; // who acted (zap caller / mint sender / redeemer / rebalancer)
+  tokens: number; // index tokens moved (0 for rebalance)
+  usdg?: number; // USDG paid/received when the zapper was used
+  txHash: `0x${string}`;
+  timestamp: number;
+};
+
+export type VaultStats = {
+  holders: number;
+  txCount: number;
+  supply: number;
+  navUsd: number;
+};
+
+/** Every mint/redeem/zap/rebalance, newest first, with the acting wallet — the public ledger. */
+export async function getActivity(limit = 60): Promise<ActivityRow[]> {
+  try {
+    const range = { fromBlock: REBALANCE_SCAN_FROM, toBlock: "latest" } as const;
+    const [mints, redeems, rebals, zapIns, zapOuts] = await Promise.all([
+      publicClient.getLogs({ address: VAULT_ADDRESS, event: mintEvent, ...range }),
+      publicClient.getLogs({ address: VAULT_ADDRESS, event: redeemEvent, ...range }),
+      publicClient.getLogs({ address: VAULT_ADDRESS, event: rebalancedEvent, ...range }),
+      publicClient.getLogs({ address: ZAPPER, event: zapMintEvent, ...range }),
+      publicClient.getLogs({ address: ZAPPER, event: zapRedeemEvent, ...range }),
+    ]);
+
+    // a zap tx also emits the vault's Mint/Redeem — keep the richer zap row for those hashes
+    const zapHashes = new Set([...zapIns, ...zapOuts].map((l) => l.transactionHash));
+
+    type Raw = { row: Omit<ActivityRow, "timestamp">; block: bigint; logIndex: number };
+    const raw: Raw[] = [];
+    for (const l of zapIns) {
+      raw.push({
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        row: {
+          kind: "Zap in",
+          wallet: (l.args.caller ?? "0x") as `0x${string}`,
+          tokens: Number(formatUnits(l.args.shares ?? 0n, 18)),
+          usdg: Number(formatUnits(l.args.usdgSpent ?? 0n, 6)),
+          txHash: l.transactionHash,
+        },
+      });
+    }
+    for (const l of zapOuts) {
+      raw.push({
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        row: {
+          kind: "Zap out",
+          wallet: (l.args.caller ?? "0x") as `0x${string}`,
+          tokens: Number(formatUnits(l.args.shares ?? 0n, 18)),
+          usdg: Number(formatUnits(l.args.usdgOut ?? 0n, 6)),
+          txHash: l.transactionHash,
+        },
+      });
+    }
+    for (const l of mints) {
+      if (zapHashes.has(l.transactionHash)) continue;
+      raw.push({
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        row: {
+          kind: "Mint",
+          wallet: (l.args.from ?? "0x") as `0x${string}`,
+          tokens: Number(formatUnits(l.args.shares ?? 0n, 18)),
+          txHash: l.transactionHash,
+        },
+      });
+    }
+    for (const l of redeems) {
+      if (zapHashes.has(l.transactionHash)) continue;
+      raw.push({
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        row: {
+          kind: "Redeem",
+          wallet: (l.args.from ?? "0x") as `0x${string}`,
+          tokens: Number(formatUnits(l.args.shares ?? 0n, 18)),
+          txHash: l.transactionHash,
+        },
+      });
+    }
+    for (const l of rebals) {
+      raw.push({
+        block: l.blockNumber,
+        logIndex: l.logIndex ?? 0,
+        row: {
+          kind: "Rebalance",
+          wallet: (l.args.by ?? "0x") as `0x${string}`,
+          tokens: 0,
+          txHash: l.transactionHash,
+        },
+      });
+    }
+
+    raw.sort((a, b) => (a.block === b.block ? b.logIndex - a.logIndex : Number(b.block - a.block)));
+    const top = raw.slice(0, limit);
+    const uniqueBlocks = [...new Set(top.map((r) => r.block))];
+    const stamps = new Map(
+      await Promise.all(
+        uniqueBlocks.map(async (b) => {
+          const blk = await publicClient.getBlock({ blockNumber: b });
+          return [b, Number(blk.timestamp)] as const;
+        }),
+      ),
+    );
+    return top.map((r) => ({ ...r.row, timestamp: stamps.get(r.block) ?? 0 }));
+  } catch {
+    return [];
+  }
+}
+
+export type HolderRow = { address: `0x${string}`; balance: number; pct: number };
+
+/** Current holders, derived from the index token's own Transfer events (mint/burn included). */
+export async function getHolders(top = 25): Promise<{ holders: HolderRow[]; count: number }> {
+  try {
+    const logs = await publicClient.getLogs({
+      address: VAULT_ADDRESS,
+      event: transferEvent,
+      fromBlock: REBALANCE_SCAN_FROM,
+      toBlock: "latest",
+    });
+    const zero = "0x0000000000000000000000000000000000000000";
+    const bal = new Map<string, bigint>();
+    for (const l of logs) {
+      const from = (l.args.from ?? zero).toLowerCase();
+      const to = (l.args.to ?? zero).toLowerCase();
+      const v = l.args.value ?? 0n;
+      if (from !== zero) bal.set(from, (bal.get(from) ?? 0n) - v);
+      if (to !== zero) bal.set(to, (bal.get(to) ?? 0n) + v);
+    }
+    const positive = [...bal.entries()].filter(([, v]) => v > 0n).sort((a, b) => (b[1] > a[1] ? 1 : -1));
+    const total = positive.reduce((s, [, v]) => s + v, 0n);
+    const holders = positive.slice(0, top).map(([a, v]) => ({
+      address: a as `0x${string}`,
+      balance: Number(formatUnits(v, 18)),
+      pct: total > 0n ? Number((v * 10_000n) / total) / 100 : 0,
+    }));
+    return { holders, count: positive.length };
+  } catch {
+    return { holders: [], count: 0 };
+  }
+}
