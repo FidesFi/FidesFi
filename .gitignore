@@ -10,6 +10,10 @@ __pycache__/
 .env
 .env.*
 !.env.example
+# Fides deploy env (real role addresses) — never commit; only *.example is tracked
+frontier.env
+*.env
+!*.env.example
 .DS_Store
 *.log
 

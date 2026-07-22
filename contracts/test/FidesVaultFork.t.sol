@@ -154,7 +154,7 @@ contract FidesVaultRhcForkTest is Test {
     }
 
     /// Redeem must keep working under real-token semantics even with mint frozen and
-    /// the rebalancer removed — the "agent mati, dana aman" property from the spec.
+    /// the rebalancer removed — the "agent dead, funds safe" property from the spec.
     function testFork_redeemLivenessUnderLockdown() public onlyOnFork {
         uint256 shares = 2e18;
         uint256 needNvda = _ceilDiv(shares * UNIT_NVDA, 1e18);

@@ -282,7 +282,7 @@
   }
   if(document.readyState==="complete") run(); else window.addEventListener("load",run);
 
-  // safety net: kalau hero masih ke-hide setelah 1.6s (JS/RAF stall), tampilkan semua
+  // safety net: if the hero is still hidden after 1.6s (JS/RAF stall), reveal everything
   setTimeout(function(){
     var h=document.querySelector("h1");
     if(h && getComputedStyle(h).opacity==="0"){ root.classList.remove("anim"); }

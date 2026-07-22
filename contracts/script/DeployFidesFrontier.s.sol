@@ -53,10 +53,15 @@ contract DeployFidesFrontier is Script {
             router: address(0) // set after router is deployed
         });
 
-        // shared v4 pool params for each stock<->quote pool (defaults; confirm per pool before rebalancing)
-        uint24 poolFee = uint24(vm.envOr("FIDES_POOL_FEE", uint256(3000)));
-        int24 poolSpacing = int24(int256(vm.envOr("FIDES_POOL_SPACING", uint256(60))));
+        // per-stock v4 pool params for its <stock>/quote pool — each stock's USDG pool can use a
+        // different fee tier (e.g. SPCX is 1% while NVDA/MSFT/TSLA/GOOGL are 0.3%). hooks shared.
         address poolHooks = vm.envOr("FIDES_POOL_HOOKS", address(0));
+        uint24[] memory poolFees = new uint24[](n);
+        int24[] memory poolSpacings = new int24[](n);
+        for (uint256 i; i < n; ++i) {
+            poolFees[i] = uint24(vm.envOr(_v(syms[i], "POOLFEE"), uint256(3000)));
+            poolSpacings[i] = int24(int256(vm.envOr(_v(syms[i], "POOLSPACING"), uint256(60))));
+        }
 
         vm.startBroadcast();
 
@@ -68,7 +73,7 @@ contract DeployFidesFrontier is Script {
         // Routes are only needed once the agent rebalances. Wire them when pool params are confirmed;
         // mint/redeem are live without them. Set FIDES_WIRE_ROUTES=true to wire at deploy time.
         if (vm.envOr("FIDES_WIRE_ROUTES", false)) {
-            _wireRoutesViaQuote(router, tokens, quote, poolFee, poolSpacing, poolHooks);
+            _wireRoutesViaQuote(router, tokens, quote, poolFees, poolSpacings, poolHooks);
         }
 
         vm.stopBroadcast();
@@ -82,16 +87,17 @@ contract DeployFidesFrontier is Script {
         FidesUniV4Router router,
         address[] memory tokens,
         address quote,
-        uint24 fee,
-        int24 spacing,
+        uint24[] memory fees,
+        int24[] memory spacings,
         address hooks
     ) internal {
         for (uint256 i; i < tokens.length; ++i) {
             for (uint256 j; j < tokens.length; ++j) {
                 if (i == j) continue;
+                // hop through the quote hub: leg i uses stock-i's pool, leg j uses stock-j's pool.
                 FidesUniV4Router.Hop[] memory hops = new FidesUniV4Router.Hop[](2);
-                hops[0] = _hop(tokens[i], quote, fee, spacing, hooks);
-                hops[1] = _hop(quote, tokens[j], fee, spacing, hooks);
+                hops[0] = _hop(tokens[i], quote, fees[i], spacings[i], hooks);
+                hops[1] = _hop(quote, tokens[j], fees[j], spacings[j], hooks);
                 router.setRoute(tokens[i], tokens[j], hops);
             }
         }
@@ -116,9 +122,9 @@ contract DeployFidesFrontier is Script {
     function _defaultSyms() internal pure returns (string[] memory s) {
         s = new string[](5);
         s[0] = "NVDA";
-        s[1] = "AMD";
-        s[2] = "MU";
-        s[3] = "PLTR";
-        s[4] = "GOOGL";
+        s[1] = "MSFT";
+        s[2] = "TSLA";
+        s[3] = "GOOGL";
+        s[4] = "SPCX";
     }
 }

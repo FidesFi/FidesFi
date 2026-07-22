@@ -28,8 +28,9 @@ contract DemoRebalanceReal is Script {
         vm.startBroadcast();
 
         (address c0, address c1) = AMD < TSLA ? (AMD, TSLA) : (TSLA, AMD);
-        PoolKey memory key =
-            PoolKey({currency0: Currency.wrap(c0), currency1: Currency.wrap(c1), fee: 3000, tickSpacing: 60, hooks: address(0)});
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(c0), currency1: Currency.wrap(c1), fee: 3000, tickSpacing: 60, hooks: address(0)
+        });
         bool zeroForOne = AMD < TSLA;
 
         if (zeroForOne) PM.setRate(key, AMD_TO_TSLA_RATE, 0);

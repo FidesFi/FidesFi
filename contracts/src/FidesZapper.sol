@@ -73,11 +73,7 @@ contract FidesZapper is ReentrancyGuard {
     /// @param maxUsdgIn   hard cap on USDG spent — the whole zap reverts if the basket costs more.
     /// @param to          recipient of the minted index tokens.
     /// @return spent      USDG actually spent buying the basket.
-    function zapMint(uint256 shares, uint256 maxUsdgIn, address to)
-        external
-        nonReentrant
-        returns (uint256 spent)
-    {
+    function zapMint(uint256 shares, uint256 maxUsdgIn, address to) external nonReentrant returns (uint256 spent) {
         if (shares == 0) revert ZeroShares();
 
         usdg.safeTransferFrom(msg.sender, address(this), maxUsdgIn);
@@ -107,11 +103,7 @@ contract FidesZapper is ReentrancyGuard {
     /// @param minUsdgOut   minimum USDG to accept — reverts if the basket sells for less.
     /// @param to           recipient of the USDG.
     /// @return usdgOut     USDG sent to `to`.
-    function zapRedeem(uint256 shares, uint256 minUsdgOut, address to)
-        external
-        nonReentrant
-        returns (uint256 usdgOut)
-    {
+    function zapRedeem(uint256 shares, uint256 minUsdgOut, address to) external nonReentrant returns (uint256 usdgOut) {
         if (shares == 0) revert ZeroShares();
 
         vault.safeTransferFrom(msg.sender, address(this), shares);
