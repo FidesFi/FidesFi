@@ -800,6 +800,7 @@ function Footer() {
     ["X", LINKS.x],
     ["Docs", LINKS.docs],
     ["Activity", "/activity"],
+    ["Liquidity map", "/map"],
     ["Explorer", LINKS.vault],
     ["GitHub", LINKS.github],
   ];
