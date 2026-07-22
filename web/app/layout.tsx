@@ -27,6 +27,10 @@ export const metadata: Metadata = {
   title: "Fides — managed stock indexes, every move on the record",
   description:
     "Autonomous baskets of tokenized stocks on Robinhood Chain. One token for the whole index — every weight, rebalance, and reason published on-chain. Verify, don't trust.",
+  // Virtuals Protocol domain-ownership verification (for the agent launch)
+  other: {
+    "virtual-protocol-site-verification": "b96712ca1bee25bdd94652e9fb7f6d98",
+  },
 };
 
 export default function RootLayout({
