@@ -83,8 +83,9 @@ export function AppClient() {
   const [account, setAccount] = useState<Address | null>(null);
   const [chainOk, setChainOk] = useState(false);
   const [vault, setVault] = useState<VaultState | null>(null);
-  const [tab, setTab] = useState<"mint" | "redeem" | "zap">("mint");
+  const [tab, setTab] = useState<"mint" | "redeem" | "zap">(ZAPPER_ADDRESS ? "zap" : "mint");
   const [zapDir, setZapDir] = useState<"in" | "out">("in");
+  const [copiedUsdg, setCopiedUsdg] = useState(false);
   const [usdg, setUsdg] = useState<{ bal: bigint; allowance: bigint; shareAllowance: bigint } | null>(null);
   const [amount, setAmount] = useState("1");
   const [busy, setBusy] = useState<string | null>(null);
@@ -412,8 +413,8 @@ export function AppClient() {
     </Gate>
   ) : !account ? (
     <Gate title="Connect to launch">
-      Connect a wallet to mint and redeem the live index on Robinhood Chain mainnet. Real
-      assets — mint pulls the actual stock-token basket from your wallet.
+      Buy the whole 5-stock index with USDG in one click — or mint/redeem in-kind if you hold
+      the stocks. Live on Robinhood Chain mainnet; a guided 3-step flow starts after you connect.
       <button onClick={connect} className={`${pill} mt-6`}>
         Connect wallet
       </button>
@@ -445,8 +446,8 @@ export function AppClient() {
           Mint &amp; redeem, straight from the contract.
         </h1>
         <p className="mt-2 max-w-[58ch] text-[14.5px] leading-relaxed text-muted">
-          No backend, no order book — your wallet talks to the vault. Deposit the basket to mint the
-          index token; burn it to take the basket back. Live on Robinhood Chain mainnet.
+          Pay USDG, get the whole 5-stock index in one click — the zapper buys the basket and mints
+          atomically. Prefer full control? Mint and redeem in-kind, straight from the contract.
         </p>
       </div>
 
@@ -533,6 +534,82 @@ export function AppClient() {
           </div>
         )}
 
+        {/* start-here stepper — live checkmarks driven by the user's actual on-chain state */}
+        {tab === "zap" && zapDir === "in" && vault && vault.shares === 0n && (
+          <div className="mb-5 overflow-hidden rounded-2xl border border-green/30 bg-green/[0.04]">
+            <div className="border-b border-green/20 px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-green-deep">
+              New here? Three steps
+            </div>
+            {(
+              [
+                {
+                  n: 1,
+                  done: !!usdg && usdg.bal > 0n,
+                  title: "Get USDG on Robinhood Chain",
+                  body: (
+                    <>
+                      Swap ETH → USDG on{" "}
+                      <a
+                        href="https://app.uniswap.org/swap"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border-b border-green text-ink"
+                      >
+                        Uniswap
+                      </a>{" "}
+                      (network: Robinhood Chain).{" "}
+                      <button
+                        onClick={() => {
+                          navigator.clipboard?.writeText(USDG_ADDRESS);
+                          setCopiedUsdg(true);
+                          setTimeout(() => setCopiedUsdg(false), 1500);
+                        }}
+                        className="rounded-md border border-ink/20 px-1.5 py-0.5 font-mono text-[10.5px] transition-colors hover:border-ink/50"
+                      >
+                        {copiedUsdg ? "copied ✓" : "copy USDG address"}
+                      </button>
+                    </>
+                  ),
+                },
+                {
+                  n: 2,
+                  done: !!usdg && zapMaxIn > 0n && usdg.allowance >= zapMaxIn,
+                  title: "Pick an amount, approve once",
+                  body: <>Fractions are fine — 0.1 token is a real position. Approving lets the zapper spend your USDG, capped at the shown max.</>,
+                },
+                {
+                  n: 3,
+                  done: false,
+                  title: "Zap in — one transaction",
+                  body: <>The zapper buys all five stocks and mints your index token atomically. Unspent USDG comes straight back.</>,
+                },
+              ] as const
+            ).map((s, i, arr) => {
+              const active = !s.done && arr.slice(0, i).every((p) => p.done);
+              return (
+                <div
+                  key={s.n}
+                  className={`flex gap-3 border-b border-green/10 px-4 py-3 last:border-0 ${
+                    s.done ? "opacity-50" : active ? "" : "opacity-60"
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full font-mono text-[10.5px] ${
+                      s.done ? "bg-green text-white" : active ? "bg-ink text-canvas" : "border border-hair text-muted"
+                    }`}
+                  >
+                    {s.done ? "✓" : s.n}
+                  </span>
+                  <span>
+                    <span className="block font-display text-[13.5px] font-semibold">{s.title}</span>
+                    <span className="mt-0.5 block text-[12.5px] leading-relaxed text-muted">{s.body}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
           Index tokens to {tab === "zap" ? (zapDir === "in" ? "buy" : "sell") : tab}
         </label>
@@ -543,6 +620,28 @@ export function AppClient() {
           placeholder="1.0"
           className="w-full rounded-2xl border border-hair bg-canvas px-4 py-3 font-mono text-[20px] tnum outline-none transition-colors focus:border-green"
         />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <span className="font-mono text-[12px] text-muted">
+            {basketValue18 > 0n ? (
+              <>1 index token ≈ {usd(basketValue18)} — fractions are fine</>
+            ) : (
+              <>each token is backed by the full 5-stock basket</>
+            )}
+          </span>
+          <span className="flex gap-1.5">
+            {(["0.1", "0.25", "0.5", "1"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setAmount(p)}
+                className={`rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                  amount === p ? "border-green text-green-deep" : "border-hair text-muted hover:border-ink/40 hover:text-ink"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </span>
+        </div>
 
         {vault && shares > 0n && tab === "zap" && (
           <div className="mt-5 overflow-hidden rounded-2xl border border-hair">
