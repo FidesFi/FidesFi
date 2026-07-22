@@ -277,6 +277,27 @@ export function AppClient() {
       }) ?? [],
     [vault, shares],
   );
+
+  // the most index tokens the CURRENT tab can handle, from the user's real balances
+  const maxShares = useMemo(() => {
+    if (tab === "redeem" || (tab === "zap" && zapDir === "out")) return vault?.shares ?? 0n;
+    if (tab === "zap" && zapDir === "in") {
+      // affordable with the USDG balance, leaving room for the +2% spend cap (uses /103 so
+      // the resulting maxIn stays under the balance even after rounding)
+      const bv = vault?.assets.reduce((s, a) => s + a.value, 0n) ?? 0n;
+      return usdg && bv > 0n ? (((usdg.bal * 100n) / 103n) * 10n ** 30n) / bv : 0n;
+    }
+    if (tab === "mint" && vault) {
+      let m: bigint | null = null;
+      for (const a of vault.assets) {
+        if (a.unit === 0n) continue;
+        const s = (a.wallet * 10n ** 18n) / a.unit; // shares this leg's wallet balance can back
+        m = m === null || s < m ? s : m;
+      }
+      return m ?? 0n;
+    }
+    return 0n;
+  }, [tab, zapDir, vault, usdg]);
   const allEnough = mintRows.every((r) => r.enough);
   const allApproved = mintRows.every((r) => r.approved);
   const feeShares = vault ? (shares * BigInt(vault.mintFeeBps)) / 10_000n : 0n;
@@ -629,17 +650,36 @@ export function AppClient() {
             )}
           </span>
           <span className="flex gap-1.5">
-            {(["0.1", "0.25", "0.5", "1"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setAmount(p)}
-                className={`rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
-                  amount === p ? "border-green text-green-deep" : "border-hair text-muted hover:border-ink/40 hover:text-ink"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+            {maxShares > 0n
+              ? (
+                  [
+                    ["25%", 25n],
+                    ["50%", 50n],
+                    ["75%", 75n],
+                    ["Max", 100n],
+                  ] as const
+                ).map(([label, p]) => (
+                  <button
+                    key={label}
+                    onClick={() => setAmount(formatUnits((maxShares * p) / 100n, 18))}
+                    className="rounded-md border border-hair px-2 py-0.5 font-mono text-[11px] text-muted transition-colors hover:border-ink/40 hover:text-ink"
+                  >
+                    {label}
+                  </button>
+                ))
+              : (["0.1", "0.25", "0.5", "1"] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setAmount(p)}
+                    className={`rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                      amount === p
+                        ? "border-green text-green-deep"
+                        : "border-hair text-muted hover:border-ink/40 hover:text-ink"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
           </span>
         </div>
 
