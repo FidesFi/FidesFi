@@ -40,6 +40,14 @@ export default function Contracts() {
             <span key="r"><b>FidesUniV4Router</b> — Uniswap v4 swap adapter</span>,
             <A key="ra" path={`address/${ROUTER}`}>{short(ROUTER)} ↗</A>,
           ],
+          [
+            <span key="z"><b>FidesZapper</b> — one-click USDG in/out (periphery, no vault powers)</span>,
+            <A key="za" path="address/0x351C442B70706D1208516BBda63ae9955Fda665e">{short("0x351C442B70706D1208516BBda63ae9955Fda665e")} ↗</A>,
+          ],
+          [
+            <span key="zr"><b>FidesZapRouter</b> — exact-out/in v4 adapter for the zapper</span>,
+            <A key="zra" path="address/0xAD102200190e4A5129F734587375fb6D776B48Ed">{short("0xAD102200190e4A5129F734587375fb6D776B48Ed")} ↗</A>,
+          ],
         ]}
       />
 

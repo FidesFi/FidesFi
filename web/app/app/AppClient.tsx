@@ -16,7 +16,10 @@ import {
   CHAIN_ID,
   CHAIN_ID_HEX,
   EXPLORER,
+  USDG_ADDRESS,
+  USDG_DECIMALS,
   VAULT_ADDRESS,
+  ZAPPER_ADDRESS,
   addChainParams,
   aggregatorAbi,
   erc20Abi,
@@ -24,6 +27,7 @@ import {
   requiredDeposit,
   rhcChain,
   vaultAbi,
+  zapperAbi,
 } from "../lib/appchain";
 
 declare global {
@@ -79,7 +83,9 @@ export function AppClient() {
   const [account, setAccount] = useState<Address | null>(null);
   const [chainOk, setChainOk] = useState(false);
   const [vault, setVault] = useState<VaultState | null>(null);
-  const [tab, setTab] = useState<"mint" | "redeem">("mint");
+  const [tab, setTab] = useState<"mint" | "redeem" | "zap">("mint");
+  const [zapDir, setZapDir] = useState<"in" | "out">("in");
+  const [usdg, setUsdg] = useState<{ bal: bigint; allowance: bigint; shareAllowance: bigint } | null>(null);
   const [amount, setAmount] = useState("1");
   const [busy, setBusy] = useState<string | null>(null);
   const [txs, setTxs] = useState<TxItem[]>([]);
@@ -203,6 +209,24 @@ export function AppClient() {
         shares: shares as bigint,
         lastRebalance: Number(lastReb as bigint),
       });
+      if (ZAPPER_ADDRESS) {
+        const [uBal, uAllo, sAllo] = await Promise.all([
+          pub.readContract({ address: USDG_ADDRESS, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
+          pub.readContract({
+            address: USDG_ADDRESS,
+            abi: erc20Abi,
+            functionName: "allowance",
+            args: [account, ZAPPER_ADDRESS],
+          }),
+          pub.readContract({
+            address: VAULT_ADDRESS,
+            abi: erc20Abi,
+            functionName: "allowance",
+            args: [account, ZAPPER_ADDRESS],
+          }),
+        ]);
+        setUsdg({ bal: uBal as bigint, allowance: uAllo as bigint, shareAllowance: sAllo as bigint });
+      }
       setLoadStale(false);
     } catch {
       // background read hiccup (RPC blip): retry quietly, never paint a scary tx-style error
@@ -314,6 +338,68 @@ export function AppClient() {
       }),
     );
 
+  /* ---------- zap (USDG <-> index, one click) ---------- */
+
+  // oracle value of ONE index token (18-dec USD) — same math the vault's nav() uses
+  const basketValue18 = useMemo(() => vault?.assets.reduce((s, a) => s + a.value, 0n) ?? 0n, [vault]);
+  // estimated USDG (6 dec) to buy / receive for `shares`
+  const zapEstUsdg = useMemo(
+    () => (basketValue18 > 0n ? (shares * basketValue18) / 10n ** BigInt(36 - USDG_DECIMALS) : 0n),
+    [shares, basketValue18],
+  );
+  const zapMaxIn = (zapEstUsdg * 102n) / 100n; // +2% headroom for pool fees + impact
+  const zapMinOut = (zapEstUsdg * 97n) / 100n; // accept -3% on the way out
+  const usdgFmt = (v: bigint) =>
+    Number(formatUnits(v, USDG_DECIMALS)).toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+  const approveUsdgZap = () =>
+    sendTx("Approve USDG", () =>
+      wallet!.writeContract({
+        address: USDG_ADDRESS,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [ZAPPER_ADDRESS as Address, zapMaxIn],
+        account: account!,
+        chain: rhcChain,
+      }),
+    );
+
+  const doZapMint = () =>
+    sendTx(`Zap in ${fmt(shares)} `, () =>
+      wallet!.writeContract({
+        address: ZAPPER_ADDRESS as Address,
+        abi: zapperAbi,
+        functionName: "zapMint",
+        args: [shares, zapMaxIn, account!],
+        account: account!,
+        chain: rhcChain,
+      }),
+    );
+
+  const approveSharesZap = () =>
+    sendTx("Approve index", () =>
+      wallet!.writeContract({
+        address: VAULT_ADDRESS,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [ZAPPER_ADDRESS as Address, shares],
+        account: account!,
+        chain: rhcChain,
+      }),
+    );
+
+  const doZapRedeem = () =>
+    sendTx(`Zap out ${fmt(shares)} `, () =>
+      wallet!.writeContract({
+        address: ZAPPER_ADDRESS as Address,
+        abi: zapperAbi,
+        functionName: "zapRedeem",
+        args: [shares, zapMinOut, account!],
+        account: account!,
+        chain: rhcChain,
+      }),
+    );
+
   /* ---------- ui ---------- */
 
   const pill =
@@ -411,21 +497,44 @@ export function AppClient() {
       {/* action card */}
       <div ref={actionRef} className="rounded-3xl border border-hair bg-white p-6">
         <div className="mb-5 flex gap-1 rounded-full border border-hair bg-canvas p-1 font-display text-[14px] font-medium">
-          {(["mint", "redeem"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 rounded-full px-4 py-2 capitalize transition-colors ${
-                tab === t ? "bg-ink text-canvas" : "text-muted hover:text-ink"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
+          {((ZAPPER_ADDRESS ? ["zap", "mint", "redeem"] : ["mint", "redeem"]) as ("mint" | "redeem" | "zap")[]).map(
+            (t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex-1 rounded-full px-4 py-2 capitalize transition-colors ${
+                  tab === t ? "bg-ink text-canvas" : "text-muted hover:text-ink"
+                }`}
+              >
+                {t === "zap" ? "Zap · USDG" : t}
+              </button>
+            ),
+          )}
         </div>
 
+        {tab === "zap" && (
+          <div className="mb-4 flex gap-1 rounded-2xl border border-hair bg-canvas p-1 font-mono text-[12px]">
+            {(
+              [
+                ["in", "Buy with USDG"],
+                ["out", "Sell to USDG"],
+              ] as const
+            ).map(([d, label]) => (
+              <button
+                key={d}
+                onClick={() => setZapDir(d)}
+                className={`flex-1 rounded-xl px-3 py-1.5 transition-colors ${
+                  zapDir === d ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-          Index tokens to {tab}
+          Index tokens to {tab === "zap" ? (zapDir === "in" ? "buy" : "sell") : tab}
         </label>
         <input
           value={amount}
@@ -435,7 +544,40 @@ export function AppClient() {
           className="w-full rounded-2xl border border-hair bg-canvas px-4 py-3 font-mono text-[20px] tnum outline-none transition-colors focus:border-green"
         />
 
-        {vault && shares > 0n && (
+        {vault && shares > 0n && tab === "zap" && (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-hair">
+            <div className="border-b border-hair bg-canvas px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+              One transaction — the zapper {zapDir === "in" ? "buys" : "sells"} the whole basket on Uniswap
+            </div>
+            <div className="flex items-center justify-between border-b border-hair/60 px-4 py-3">
+              <span className="font-mono text-[13px] text-muted">
+                {zapDir === "in" ? "Estimated cost" : "Estimated receive"}
+              </span>
+              <span className="font-mono text-[13.5px] tnum">{usdgFmt(zapEstUsdg)} USDG</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-hair/60 px-4 py-3">
+              <span className="font-mono text-[13px] text-muted">
+                {zapDir === "in" ? "Max spend (rest refunded)" : "Minimum accepted"}
+              </span>
+              <span className="font-mono text-[13.5px] tnum">
+                {usdgFmt(zapDir === "in" ? zapMaxIn : zapMinOut)} USDG
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="font-mono text-[13px] text-muted">Your USDG</span>
+              <span className="flex items-center gap-3">
+                <span className="font-mono text-[13.5px] tnum">{usdg ? usdgFmt(usdg.bal) : "—"}</span>
+                {zapDir === "in" && usdg && usdg.bal < zapMaxIn && (
+                  <span className="rounded-md bg-[#a23b2f]/10 px-2 py-0.5 font-mono text-[10.5px] text-[#a23b2f]">
+                    insufficient
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {vault && shares > 0n && tab !== "zap" && (
           <div className="mt-5 overflow-hidden rounded-2xl border border-hair">
             <div className="border-b border-hair bg-canvas px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
               {tab === "mint" ? "You deposit (rounded up, in the vault's favor)" : "You receive (rounded down)"}
@@ -501,13 +643,61 @@ export function AppClient() {
                       ? "Approve all assets first"
                       : "Mint"}
             </button>
-          ) : (
+          ) : tab === "redeem" ? (
             <button
               onClick={doRedeem}
               disabled={busy !== null || shares === 0n || (vault ? shares > vault.shares : true)}
               className={`${pill} w-full`}
             >
               {busy?.startsWith("Redeem") ? "Redeeming…" : vault && shares > vault.shares ? "Exceeds balance" : "Redeem in-kind"}
+            </button>
+          ) : zapDir === "in" ? (
+            usdg && usdg.allowance < zapMaxIn ? (
+              <button
+                onClick={approveUsdgZap}
+                disabled={busy !== null || shares === 0n || vault?.mintPaused || usdg.bal < zapMaxIn}
+                className={`${pill} w-full`}
+              >
+                {busy === "Approve USDG"
+                  ? "Approving…"
+                  : usdg.bal < zapMaxIn
+                    ? "Insufficient USDG"
+                    : `Approve ${usdgFmt(zapMaxIn)} USDG`}
+              </button>
+            ) : (
+              <button
+                onClick={doZapMint}
+                disabled={busy !== null || shares === 0n || vault?.mintPaused || (usdg ? usdg.bal < zapMaxIn : true)}
+                className={`${pill} w-full`}
+              >
+                {vault?.mintPaused
+                  ? "Minting is paused"
+                  : busy?.startsWith("Zap in")
+                    ? "Zapping…"
+                    : usdg && usdg.bal < zapMaxIn
+                      ? "Insufficient USDG"
+                      : "Zap in — one click"}
+              </button>
+            )
+          ) : usdg && usdg.shareAllowance < shares ? (
+            <button
+              onClick={approveSharesZap}
+              disabled={busy !== null || shares === 0n || (vault ? shares > vault.shares : true)}
+              className={`${pill} w-full`}
+            >
+              {busy === "Approve index" ? "Approving…" : "Approve index tokens"}
+            </button>
+          ) : (
+            <button
+              onClick={doZapRedeem}
+              disabled={busy !== null || shares === 0n || (vault ? shares > vault.shares : true)}
+              className={`${pill} w-full`}
+            >
+              {busy?.startsWith("Zap out")
+                ? "Zapping…"
+                : vault && shares > vault.shares
+                  ? "Exceeds balance"
+                  : "Zap out to USDG"}
             </button>
           )}
         </div>
@@ -517,7 +707,16 @@ export function AppClient() {
         {tab === "mint" && (
           <p className="mt-4 text-[12.5px] leading-relaxed text-muted">
             Minting pulls the exact stock-token basket from your wallet — get the five constituents
-            on Robinhood Chain first (e.g. via a DEX). These are real assets; mind the amounts.
+            on Robinhood Chain first{ZAPPER_ADDRESS ? ", or use the Zap tab to pay in USDG only" : " (e.g. via a DEX)"}.
+            These are real assets; mind the amounts.
+          </p>
+        )}
+        {tab === "zap" && (
+          <p className="mt-4 text-[12.5px] leading-relaxed text-muted">
+            The zapper is atomic periphery: it {zapDir === "in"
+              ? "buys the exact basket on Uniswap and mints in the same transaction — unspent USDG comes straight back"
+              : "redeems your basket and sells it on Uniswap in the same transaction"}. It holds
+            nothing between transactions and has no special powers over the vault.
           </p>
         )}
       </div>

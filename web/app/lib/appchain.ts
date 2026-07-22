@@ -6,6 +6,11 @@ export const EXPLORER = "https://robinhoodchain.blockscout.com";
 export const VAULT_ADDRESS = "0x4504483Ea748e630A9368F44f0Ee5B4350462Db8" as const;
 export const RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
 
+// One-click zap (USDG <-> index), deployed 22 Jul 2026. Zap tab hides itself if ever emptied.
+export const ZAPPER_ADDRESS = "0x351C442B70706D1208516BBda63ae9955Fda665e" as `0x${string}` | "";
+export const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as const;
+export const USDG_DECIMALS = 6;
+
 export const rhcChain = {
   id: CHAIN_ID,
   name: "Robinhood Chain",
@@ -97,6 +102,31 @@ export const erc20Abi = [
     stateMutability: "nonpayable",
     inputs: [{ type: "address" }, { type: "uint256" }],
     outputs: [{ type: "bool" }],
+  },
+] as const;
+
+export const zapperAbi = [
+  {
+    type: "function",
+    name: "zapMint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "shares", type: "uint256" },
+      { name: "maxUsdgIn", type: "uint256" },
+      { name: "to", type: "address" },
+    ],
+    outputs: [{ name: "spent", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "zapRedeem",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "shares", type: "uint256" },
+      { name: "minUsdgOut", type: "uint256" },
+      { name: "to", type: "address" },
+    ],
+    outputs: [{ name: "usdgOut", type: "uint256" }],
   },
 ] as const;
 
