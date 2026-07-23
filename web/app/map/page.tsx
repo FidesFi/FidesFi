@@ -148,11 +148,12 @@ export default function MapPage() {
 
         <div className="mt-6 rounded-2xl border border-hair bg-canvas px-5 py-4">
           <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">Verify any row yourself</p>
-          <pre className="mt-2 overflow-x-auto font-mono text-[12px] leading-relaxed text-[#3b3f42]">{`# how much USDG for $10k of NVDA? if it reverts, the pool is a mirage.
+          <pre className="mt-2 overflow-x-auto font-mono text-[12px] leading-relaxed text-[#3b3f42]">{`# $10k of USDG -> how much NVDA? a revert means the pool is a mirage.
 cast call 0x8dc178efb8111bb0973dd9d722ebeff267c98f94 \\
   "quoteExactInputSingle(((address,address,uint24,int24,address),bool,uint128,bytes))(uint256,uint256)" \\
-  "((0x5fc5360D..,0xd0601CE1..,3000,60,0x0)),true,10000000000,0x)" \\
-  --rpc-url https://rpc.mainnet.chain.robinhood.com`}</pre>
+  "((0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168,0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC,3000,60,0x0000000000000000000000000000000000000000),true,10000000000,0x)" \\
+  --rpc-url https://rpc.mainnet.chain.robinhood.com
+# -> 46976534127289052879  (~46.98 NVDA for $10k · 18 decimals)`}</pre>
         </div>
 
         <p className="mt-6 font-mono text-[12px] text-muted">
